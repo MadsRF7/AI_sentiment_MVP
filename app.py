@@ -4,8 +4,14 @@ import streamlit as st
 from config import Settings
 from services.file_service import FileService
 from services.sentiment_analysis import SentimentService
+from services.analysis_service import AnalysisService
 from charts.chart_service import ChartService
 
+from db.database import Base, engine, get_session
+from db.repositories.comment_repository import CommentRepository
+
+# Opret tabeller hvis de ikke findes
+Base.metadata.create_all(bind=engine)
 
 st.set_page_config(
     page_title=Settings.PAGE_TITLE,
@@ -27,6 +33,7 @@ with st.sidebar:
     st.write("✅ Analyse comments")
     st.write("✅ Positive / Neutral / Negative")
     st.write("✅ Overall summary")
+    st.write("✅ Save results in database")
     st.write("❌ Trend spotting")
     st.write("❌ Engagement analysis")
 
@@ -56,14 +63,20 @@ if uploaded_file is not None:
                 if not sentiment_service.is_ready():
                     st.error("Missing OPENAI_API_KEY in your .env file.")
                 else:
+                    session = get_session()
+                    repository = CommentRepository(session)
+                    analysis_service = AnalysisService(sentiment_service, repository)
+
                     progress_bar = st.progress(0.0)
 
-                    results_df = sentiment_service.analyze_comments(
+                    results_df = analysis_service.run_analysis(
                         df=df,
+                        source_file=uploaded_file.name,
                         progress_callback=progress_bar.progress
                     )
 
                     progress_bar.empty()
+                    session.close()
 
                     valid_results = results_df[
                         results_df["sentiment"].isin(["positive", "neutral", "negative"])
@@ -122,6 +135,19 @@ if uploaded_file is not None:
                         file_name="sentiment_results.csv",
                         mime="text/csv"
                     )
+
+        st.divider()
+        st.subheader("Saved analyses in database")
+
+        session = get_session()
+        repository = CommentRepository(session)
+        db_df = repository.fetch_all_as_dataframe()
+        session.close()
+
+        if not db_df.empty:
+            st.dataframe(db_df.tail(50), use_container_width=True)
+        else:
+            st.write("No analyses saved in the database yet.")
 
     except Exception as e:
         st.error(f"Error: {e}")
