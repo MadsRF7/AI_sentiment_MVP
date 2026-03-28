@@ -1,29 +1,53 @@
-import pandas as pd
 from config import Settings
 
 
-# AnalysisService class is responsible for performing sentiment analysis on comments 
-# and saving the results to the repository.
 class AnalysisService:
-    def __init__ (self, sentiment_analysis, comment_repository):
-        self.sentiment_analysis = sentiment_analysis
-        self.comment_repository = comment_repository
+    def __init__(
+        self,
+        sentiment_service,
+        video_repo,
+        comment_repo,
+        sentiment_repo,
+    ):
+        self.sentiment_service = sentiment_service
+        self.video_repo = video_repo
+        self.comment_repo = comment_repo
+        self.sentiment_repo = sentiment_repo
 
-# The run_analysis method processes each comment in the DataFrame, classifies its sentiment,
-# and saves the results to the repository. 
-# It also supports a progress callback to track the analysis
-    def run_analysis(self, df: pd.DataFrame, source_file: str, progress_callback=None) -> pd.DataFrame:
+    def run_analysis(self, df, source_file, progress_callback=None):
         results = []
         total = len(df)
 
+        video = self.video_repo.get_or_create_video(
+            platform="csv",
+            title=source_file,
+            platform_video_id=source_file,
+        )
+
         for idx, row in df.iterrows():
-            comment_id = row[Settings.COMMENT_COLUMN]
-            comment_text = row[Settings.COMMENT_COLUMN]
+            text = row[Settings.COMMENT_COLUMN]
+
+            platform_comment_id = f"{source_file}_{idx}"
+
+            comment = self.comment_repo.get_or_create_comment(
+                platform_comment_id=platform_comment_id,
+                video_id=video.id,
+                text=text,
+            )
 
             try:
-                result = self.sentiment_analysis.classify_comment(comment_text)
+                result = self.sentiment_service.classify_comment(text)
+
                 sentiment = result["sentiment"]
                 reason = result["reason"]
+
+                self.sentiment_repo.save_sentiment(
+                    comment_id=comment.id,
+                    sentiment=sentiment,
+                    reason=reason,
+                    model_name="gpt-4.1-mini",
+                )
+
             except Exception as e:
                 sentiment = "error"
                 reason = str(e)
@@ -33,15 +57,7 @@ class AnalysisService:
             enriched_row["reason"] = reason
             results.append(enriched_row)
 
-            self.comment_repository.save_analysis_row(
-                source_file=source_file,
-                comment_id=comment_id,
-                comment_text=comment_text,
-                sentiment=sentiment,
-                reason=reason,
-            )
-
-            if progress_callback is not None and total > 0:
+            if progress_callback:
                 progress_callback((idx + 1) / total)
 
-            return pd.DataFrame(results)
+        return results

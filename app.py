@@ -8,7 +8,10 @@ from services.analysis_service import AnalysisService
 from charts.chart_service import ChartService
 
 from db.database import Base, engine, get_session
+from db.repositories.video_repository import VideoRepository
 from db.repositories.comment_repository import CommentRepository
+from db.repositories.sentiment_repository import SentimentRepository
+ 
 
 # Opret tabeller hvis de ikke findes
 Base.metadata.create_all(bind=engine)
@@ -64,12 +67,21 @@ if uploaded_file is not None:
                     st.error("Missing OPENAI_API_KEY in your .env file.")
                 else:
                     session = get_session()
-                    repository = CommentRepository(session)
-                    analysis_service = AnalysisService(sentiment_service, repository)
+
+                    video_repo = VideoRepository(session)
+                    comment_repo = CommentRepository(session)
+                    sentiment_repo = SentimentRepository(session)
+
+                    analysis_service = AnalysisService(
+                        sentiment_service=sentiment_service,
+                        video_repo=video_repo,
+                        comment_repo=comment_repo,
+                        sentiment_repo=sentiment_repo,
+                    )
 
                     progress_bar = st.progress(0.0)
 
-                    results_df = analysis_service.run_analysis(
+                    results = analysis_service.run_analysis(
                         df=df,
                         source_file=uploaded_file.name,
                         progress_callback=progress_bar.progress
@@ -78,70 +90,14 @@ if uploaded_file is not None:
                     progress_bar.empty()
                     session.close()
 
-                    valid_results = results_df[
-                        results_df["sentiment"].isin(["positive", "neutral", "negative"])
-                    ].copy()
-
-                    counts = valid_results["sentiment"].value_counts()
-
-                    total_analyzed = len(valid_results)
-                    pos = int(counts.get("positive", 0))
-                    neu = int(counts.get("neutral", 0))
-                    neg = int(counts.get("negative", 0))
-
-                    st.subheader("Summary")
-
-                    c1, c2, c3, c4 = st.columns(4)
-
-                    c1.metric("Text Analyzed", total_analyzed)
-                    c2.metric("Positive", pos)
-                    c3.metric("Neutral", neu)
-                    c4.metric("Negative", neg)
-
-                    st.info(sentiment_service.overall_sentiment_label(counts))
-
-                    st.subheader("Sentiment distribution")
-                    chart = chart_service.build_sentiment_chart(pos, neu, neg)
-                    st.altair_chart(chart, use_container_width=True)
-
-                    st.subheader("Most negative comments")
-                    negative_df = results_df[results_df["sentiment"] == "negative"][
-                        [Settings.COMMENT_COLUMN, "reason"]
-                    ].head(5)
-
-                    if len(negative_df) > 0:
-                        st.dataframe(negative_df, use_container_width=True)
-                    else:
-                        st.write("No negative comments found.")
-
-                    st.subheader("Detailed results")
-
-                    def color_sentiment(val):
-                        if val == "positive":
-                            return "color: green; font-weight: bold;"
-                        if val == "neutral":
-                            return "color: blue; font-weight: bold;"
-                        if val == "negative":
-                            return "color: red; font-weight: bold;"
-                        return ""
-
-                    styled_df = results_df.style.map(color_sentiment, subset=["sentiment"])
-                    st.dataframe(styled_df, use_container_width=True)
-
-                    csv_data = file_service.convert_df_to_csv(results_df)
-                    st.download_button(
-                        label="Download results as CSV",
-                        data=csv_data,
-                        file_name="sentiment_results.csv",
-                        mime="text/csv"
-                    )
+                    results_df = pd.DataFrame(results)
 
         st.divider()
         st.subheader("Saved analyses in database")
 
         session = get_session()
-        repository = CommentRepository(session)
-        db_df = repository.fetch_all_as_dataframe()
+        sentiment_repo = SentimentRepository(session)
+        db_df = sentiment_repo.fetch_analysis_overview_as_dataframe()
         session.close()
 
         if not db_df.empty:
