@@ -1,3 +1,6 @@
+import hashlib
+import re
+
 from config import Settings
 
 
@@ -5,59 +8,77 @@ class AnalysisService:
     def __init__(
         self,
         sentiment_service,
-        video_repo,
-        comment_repo,
-        sentiment_repo,
+        analysis_run_repo,
+        analysis_result_repo,
     ):
         self.sentiment_service = sentiment_service
-        self.video_repo = video_repo
-        self.comment_repo = comment_repo
-        self.sentiment_repo = sentiment_repo
+        self.analysis_run_repo = analysis_run_repo
+        self.analysis_result_repo = analysis_result_repo
+
+    def normalize_comment(self, text: str) -> str:
+        text = str(text).strip().lower()
+        text = re.sub(r"\s+", " ", text)
+        return text
+
+    def make_comment_hash(self, text: str) -> str:
+        normalized = self.normalize_comment(text)
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
     def run_analysis(self, df, source_file, progress_callback=None):
         results = []
+        result_rows = []
+
+        total_rows = len(df)
         total = len(df)
 
-        video = self.video_repo.get_or_create_video(
-            platform="csv",
-            title=source_file,
-            platform_video_id=source_file,
+        run = self.analysis_run_repo.create_run(
+            original_file_name=source_file,
+            total_rows=total_rows,
+            valid_comment_rows=total_rows,
+            file_hash=None,
         )
 
-        for idx, row in df.iterrows():
-            text = row[Settings.COMMENT_COLUMN]
+        try:
+            for idx, row in df.iterrows():
+                text = row[Settings.COMMENT_COLUMN]
+                row_index = idx + 1
+                comment_hash = self.make_comment_hash(text)
 
-            platform_comment_id = f"{source_file}_{idx}"
+                try:
+                    result = self.sentiment_service.classify_comment(text)
+                    sentiment = result["sentiment"]
+                    reason = result["reason"]
 
-            comment = self.comment_repo.get_or_create_comment(
-                platform_comment_id=platform_comment_id,
-                video_id=video.id,
-                text=text,
-            )
+                except Exception as e:
+                    sentiment = "neutral"
+                    reason = f"Analysis error: {str(e)}"
 
-            try:
-                result = self.sentiment_service.classify_comment(text)
+                result_row = {
+                    "run_id": run.id,
+                    "row_index": row_index,
+                    "platform_comment_id": None,
+                    "comment_text": text,
+                    "comment_hash": comment_hash,
+                    "sentiment": sentiment,
+                    "reason": reason,
+                    "model_name": "gpt-4.1-mini",
+                }
 
-                sentiment = result["sentiment"]
-                reason = result["reason"]
+                result_rows.append(result_row)
 
-                self.sentiment_repo.save_sentiment(
-                    comment_id=comment.id,
-                    sentiment=sentiment,
-                    reason=reason,
-                    model_name="gpt-4.1-mini",
-                )
+                enriched_row = row.to_dict()
+                enriched_row["sentiment"] = sentiment
+                enriched_row["reason"] = reason
+                results.append(enriched_row)
 
-            except Exception as e:
-                sentiment = "error"
-                reason = str(e)
+                if progress_callback:
+                    progress_callback((idx + 1) / total)
 
-            enriched_row = row.to_dict()
-            enriched_row["sentiment"] = sentiment
-            enriched_row["reason"] = reason
-            results.append(enriched_row)
+            self.analysis_result_repo.save_results_bulk(result_rows)
+            self.analysis_run_repo.mark_completed(run.id)
 
-            if progress_callback:
-                progress_callback((idx + 1) / total)
+            return run.id, results
 
-        return results
+        except Exception:
+            self.analysis_run_repo.mark_failed(run.id)
+            raise

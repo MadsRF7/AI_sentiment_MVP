@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, func # Import necessary SQLAlchemy components
+from sqlalchemy import (
+    Column, Integer, String, Text, DateTime, ForeignKey, func, Enum, UniqueConstraint
+    ) # Import necessary SQLAlchemy components
 from sqlalchemy.orm import relationship # Import relationship for defining relationships between tables
 from db.database import Base # Import the Base class from the database module
 
@@ -53,3 +55,57 @@ class SentimentResult(Base):
     created_at = Column(DateTime, server_default=func.now()) # Automatically set the created_at field to the current time
 
     comment = relationship("Comment", back_populates="sentiments")
+
+
+# Define the AnalysisRun model, 
+# which represents an analysis run in the database 
+# and includes fields for id, run_uuid, original_file_name, file_hash, total_rows, valid_comment_rows, status, created_at, completed_at, and a relationship to analysis results.
+class AnalysisRun(Base):
+    __tablename__ = "analysis_runs"
+
+    id = Column(Integer, primary_key=True)
+    run_uuid = Column(String(36), nullable=False, unique=True)
+    original_file_name = Column(String(255), nullable=False)
+    file_hash = Column(String(64), nullable=True)
+    total_rows = Column(Integer, nullable=False, default=0)
+    valid_comment_rows = Column(Integer, nullable=False, default=0)
+    status = Column(
+        Enum("uploaded", "processing", "completed", "failed", name="analysis_status_enum"),
+        nullable=False,
+        default="uploaded"
+    )
+    created_at = Column(DateTime, server_default=func.now())
+    completed_at = Column(DateTime, nullable=True)
+
+    results = relationship(
+        "AnalysisResult",
+        back_populates="run",
+        cascade="all, delete-orphan"
+    )
+
+
+# Define the AnalysisResult model,
+# which represents the result of an analysis run on a specific comment in the database
+class AnalysisResult(Base):
+    __tablename__ = "analysis_results"
+
+    id = Column(Integer, primary_key=True)
+    run_id = Column(Integer, ForeignKey("analysis_runs.id", ondelete="CASCADE"), nullable=False)
+    row_index = Column(Integer, nullable=False)
+    platform_comment_id = Column(String(255), nullable=True)
+    comment_text = Column(Text, nullable=False)
+    comment_hash = Column(String(64), nullable=False)
+    sentiment = Column(
+        Enum("positive", "neutral", "negative", name="sentiment_enum"),
+        nullable=False
+    )
+    reason = Column(Text, nullable=False)
+    model_name = Column(String(100), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    run = relationship("AnalysisRun", back_populates="results")
+
+    __table_args__ = (
+        UniqueConstraint("run_id", "row_index", name="uq_run_row"),
+        UniqueConstraint("run_id", "comment_hash", name="uq_run_comment"),
+    )
