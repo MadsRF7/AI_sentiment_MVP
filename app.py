@@ -14,7 +14,7 @@ from db.repositories.analysis_result_repository import AnalysisResultRepository
 from db.models import AnalysisRun, AnalysisResult
  
 
-# Opret tabeller hvis de ikke findes
+# Creates tables if they don't exist
 Base.metadata.create_all(bind=engine)
 
 st.set_page_config(
