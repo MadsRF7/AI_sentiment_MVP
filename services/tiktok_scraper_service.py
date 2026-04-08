@@ -3,7 +3,7 @@ from typing import List, Dict
 
 import agentql
 import pandas as pd
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright
 
 
 QUERY = """
@@ -21,7 +21,7 @@ class TikTokScraperService:
         self,
         user_data_dir: str = "./playwright_profile",
         channel: str = "chrome",
-        headless: bool = False, #--- bool = TRUE -> browser runs in background, FALSE -> browser is visible (for debugging) ---#
+        headless: bool = False,  # TRUE = browser runs in background, FALSE = visible for debugging
     ):
         self.user_data_dir = user_data_dir
         self.channel = channel
@@ -57,7 +57,10 @@ class TikTokScraperService:
         return f'{comment["author"]}||{comment["text"]}'
 
     @staticmethod
-    def comments_to_dataframe(comments: List[Dict], comment_column: str = "comment_text") -> pd.DataFrame:
+    def comments_to_dataframe(
+        comments: List[Dict],
+        comment_column: str = "comment_text"
+    ) -> pd.DataFrame:
         if not comments:
             return pd.DataFrame(columns=[comment_column, "author"])
 
@@ -106,7 +109,6 @@ class TikTokScraperService:
             except Exception:
                 pass
 
-        # fallback: prøv JS-klik på elementer med comment-tekst/aria-label
         try:
             clicked = page.evaluate("""
             () => {
@@ -136,48 +138,243 @@ class TikTokScraperService:
         return False
 
     def find_comment_scroll_container(self, page):
+        try:
+            result = page.evaluate("""
+                () => {
+                    const commentSelectors = [
+                        "[data-e2e='comment-level-1']",
+                        "[data-e2e='comment-item']",
+                        "[data-e2e*='comment-level']",
+                        "[data-e2e*='comment-username']",
+                        "div[class*='CommentItem']",
+                        "div[class*='DivCommentItemContainer']"
+                    ];
+
+                    function isScrollable(node) {
+                        if (!node || node.nodeType !== 1) return false;
+                        const style = window.getComputedStyle(node);
+                        const overflowY = style.overflowY;
+                        return (
+                            (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+                            node.scrollHeight > node.clientHeight
+                        );
+                    }
+
+                    for (const selector of commentSelectors) {
+                        const items = document.querySelectorAll(selector);
+                        if (!items.length) continue;
+
+                        for (const item of items) {
+                            let current = item.parentElement;
+                            while (current) {
+                                if (isScrollable(current)) {
+                                    return {
+                                        found: true,
+                                        selectorUsed: selector,
+                                        tagName: current.tagName,
+                                        className: current.className || "",
+                                        dataE2E: current.getAttribute("data-e2e") || "",
+                                        scrollTop: current.scrollTop || 0,
+                                        scrollHeight: current.scrollHeight || 0,
+                                        clientHeight: current.clientHeight || 0,
+                                        overflowY: window.getComputedStyle(current).overflowY || ""
+                                    };
+                                }
+                                current = current.parentElement;
+                            }
+                        }
+                    }
+
+                    return { found: false };
+                }
+            """)
+
+            print(f"[find_container] Resultat: {result}")
+            return result
+
+        except Exception as e:
+            print(f"[find_container] Fejl: {e}")
+            return {"found": False, "error": str(e)}
+
+    def extract_visible_comments_from_dom(self, page) -> List[Dict]:
         selectors = [
-            "[data-e2e='comment-list']",
-            "[data-e2e='search-comment-list']",
-            "div[data-e2e*='comment']",
-            "div[class*='DivCommentListContainer']",
-            "div[class*='CommentListContainer']",
-            "aside",
+            "[data-e2e='comment-level-1']",
+            "div[class*='CommentItem']",
+            "div[class*='DivCommentItemContainer']",
         ]
+
+        all_comments = []
+        seen = set()
 
         for selector in selectors:
             try:
-                locator = page.locator(selector).first
-                if locator.count() > 0:
-                    return locator
-            except Exception:
-                pass
+                items = page.locator(selector)
+                count = items.count()
 
-        return None
+                if count == 0:
+                    continue
 
-    def scroll_comment_panel(self, page, scroll_rounds: int = 10, pause_ms: int = 1500):
-        container = self.find_comment_scroll_container(page)
+                print(f"[extract] Bruger selector '{selector}' med {count} items")
 
-        if container is not None:
-            for _ in range(scroll_rounds):
-                try:
-                    container.hover()
-                    page.mouse.wheel(0, 1500)
+                for i in range(count):
+                    item = items.nth(i)
+
+                    try:
+                        if not item.is_visible(timeout=500):
+                            continue
+                    except Exception:
+                        continue
+
+                    try:
+                        text = ""
+                        author = ""
+
+                        author_selectors = [
+                            "[data-e2e*='comment-username']",
+                            "span[class*='UserName']",
+                            "a[href*='@']",
+                        ]
+                        for a_sel in author_selectors:
+                            try:
+                                a_loc = item.locator(a_sel).first
+                                if a_loc.count() > 0:
+                                    author = (a_loc.inner_text(timeout=500) or "").strip()
+                                    if author:
+                                        break
+                            except Exception:
+                                pass
+
+                        text_selectors = [
+                            "[data-e2e='comment-level-1'] span",
+                            "p",
+                            "span",
+                        ]
+                        for t_sel in text_selectors:
+                            try:
+                                text_nodes = item.locator(t_sel)
+                                node_count = text_nodes.count()
+                                collected = []
+
+                                for j in range(min(node_count, 10)):
+                                    try:
+                                        val = (text_nodes.nth(j).inner_text(timeout=300) or "").strip()
+                                        if val:
+                                            collected.append(val)
+                                    except Exception:
+                                        pass
+
+                                if collected:
+                                    text = " ".join(collected).strip()
+                                    break
+                            except Exception:
+                                pass
+
+                        text = " ".join(text.split())
+                        author = " ".join(author.split())
+
+                        if not text or not author:
+                            continue
+
+                        key = f"{author}||{text}"
+                        if key in seen:
+                            continue
+
+                        seen.add(key)
+                        all_comments.append({
+                            "author": author,
+                            "text": text,
+                        })
+
+                    except Exception:
+                        continue
+
+            except Exception as e:
+                print(f"[extract] Fejl ved selector '{selector}': {e}")
+
+        return all_comments
+
+    def scroll_comment_panel(
+        self,
+        page,
+        scroll_rounds: int = 3,
+        pause_ms: int = 1500,
+    ) -> bool:
+        comment_selectors = [
+            "[data-e2e='comment-level-1']",
+            "div[class*='CommentItem']",
+            "div[class*='DivCommentItemContainer']",
+        ]
+
+        for round_no in range(1, scroll_rounds + 1):
+            try:
+                target_box = None
+                used_selector = None
+
+                for selector in comment_selectors:
+                    items = page.locator(selector)
+                    count = items.count()
+
+                    if count == 0:
+                        continue
+
+                    for i in range(count - 1, -1, -1):
+                        item = items.nth(i)
+                        try:
+                            if not item.is_visible(timeout=300):
+                                continue
+                            box = item.bounding_box()
+                            if box:
+                                target_box = box
+                                used_selector = selector
+                                break
+                        except Exception:
+                            continue
+
+                    if target_box:
+                        break
+
+                if not target_box:
+                    print(f"[scroll] Runde {round_no}: ingen synlig comment-boks fundet, fallback til page wheel.")
+                    page.mouse.wheel(0, 2000)
                     page.wait_for_timeout(pause_ms)
-                except Exception:
-                    break
-        else:
-            # fallback: scroll hele siden
-            for _ in range(scroll_rounds):
-                page.mouse.wheel(0, 1500)
+                    continue
+
+                x = target_box["x"] + min(50, target_box["width"] / 2)
+                y = target_box["y"] + min(30, target_box["height"] / 2)
+
+                print(
+                    f"[scroll] Runde {round_no}: bruger selector='{used_selector}', "
+                    f"x={x:.1f}, y={y:.1f}"
+                )
+
+                page.mouse.move(x, y)
+                page.mouse.wheel(0, 2200)
                 page.wait_for_timeout(pause_ms)
+
+                try:
+                    page.keyboard.press("PageDown")
+                    page.wait_for_timeout(400)
+                except Exception:
+                    pass
+
+                try:
+                    page.wait_for_page_ready_state()
+                except Exception:
+                    pass
+
+            except Exception as e:
+                print(f"[scroll] Fejl i runde {round_no}: {e}")
+                return False
+
+        return True
 
     def scrape_comments(
         self,
         video_url: str,
-        rounds: int = 3,
-        scroll_rounds_between_queries: int = 2,
+        max_scroll_iterations: int = 40,
+        stable_rounds_required: int = 8,
         wait_after_load_ms: int = 5000,
+        wait_between_rounds_ms: int = 1500,
     ) -> List[Dict]:
         all_comments = {}
 
@@ -189,9 +386,10 @@ class TikTokScraperService:
                 no_viewport=True,
             )
 
-            page = agentql.wrap(browser.new_page())
+            page = browser.new_page()
 
             try:
+                print(f"\n[SCRAPE] Åbner video: {video_url}")
                 page.goto(video_url, wait_until="domcontentloaded", timeout=60000)
                 page.wait_for_timeout(wait_after_load_ms)
 
@@ -199,38 +397,61 @@ class TikTokScraperService:
                 self.pause_video(page)
 
                 panel_opened = self.open_comment_panel(page)
-                page.wait_for_timeout(2000)
-
                 if not panel_opened:
                     raise RuntimeError("Kunne ikke åbne TikTok kommentarpanelet automatisk.")
 
-                # første scroll for at loade flere kommentarer
-                self.scroll_comment_panel(page, scroll_rounds=2, pause_ms=1200)
+                print("[SCRAPE] Kommentarpanel åbnet.")
+                page.wait_for_timeout(3000)
 
-                for i in range(rounds):
-                    try:
-                        response = page.query_data(QUERY)
-                    except Exception as e:
-                        print(f"AgentQL query fejlede i runde {i + 1}: {e}")
-                        response = {}
+                stable_rounds = 0
+                previous_unique_count = 0
 
-                    comments = response.get("comments", [])
-                    print(f"Runde {i + 1}: rå antal = {len(comments)}")
+                self.scroll_comment_panel(page, scroll_rounds=4, pause_ms=1200)
 
-                    for c in comments:
+                for iteration in range(1, max_scroll_iterations + 1):
+                    print(f"\n========== ITERATION {iteration}/{max_scroll_iterations} ==========")
+
+                    page.wait_for_timeout(wait_between_rounds_ms)
+
+                    visible_comments = self.extract_visible_comments_from_dom(page)
+                    print(f"[SCRAPE] Synlige comments fundet i DOM: {len(visible_comments)}")
+
+                    added_this_round = 0
+
+                    for c in visible_comments:
                         normalized = self.normalize_comment(c)
-
                         if self.is_valid_comment(normalized):
                             key = self.comment_key(normalized)
-                            all_comments[key] = normalized
+                            if key not in all_comments:
+                                all_comments[key] = normalized
+                                added_this_round += 1
 
-                    self.scroll_comment_panel(
+                    current_unique_count = len(all_comments)
+
+                    print(f"[SCRAPE] Nye unikke kommentarer: {added_this_round}")
+                    print(f"[SCRAPE] Samlet unikke kommentarer: {current_unique_count}")
+
+                    if current_unique_count == previous_unique_count:
+                        stable_rounds += 1
+                        print(f"[SCRAPE] Ingen vækst. Stable rounds: {stable_rounds}/{stable_rounds_required}")
+                    else:
+                        stable_rounds = 0
+                        previous_unique_count = current_unique_count
+                        print("[SCRAPE] Der kom nye kommentarer ind.")
+
+                    if stable_rounds >= stable_rounds_required:
+                        print("[SCRAPE] Stopper: ingen vækst i tilstrækkeligt mange runder.")
+                        break
+
+                    scrolled = self.scroll_comment_panel(
                         page,
-                        scroll_rounds=scroll_rounds_between_queries,
-                        pause_ms=1500
+                        scroll_rounds=2,
+                        pause_ms=wait_between_rounds_ms,
                     )
+                    print(f"[SCRAPE] Scroll-resultat: {scrolled}")
 
                 final_comments = list(all_comments.values())
+                print(f"\n[SCRAPE] Færdig. Samlet antal unikke kommentarer scrapet: {len(final_comments)}")
                 return final_comments
 
             finally:
