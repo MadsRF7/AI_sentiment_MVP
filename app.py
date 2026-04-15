@@ -62,8 +62,7 @@ with st.sidebar:
     st.write("✅ Positive / Neutral / Negative")
     st.write("✅ Overall summary")
     st.write("✅ Save results in database")
-    st.write("❌ Trend spotting")
-    st.write("❌ Engagement analysis")
+    st.write("✅ Improved prompt engineering since v.2.0")
 
 # -------------------------
 # VÆLG DATAKILDE
