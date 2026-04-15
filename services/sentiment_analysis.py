@@ -56,8 +56,8 @@ Decision rules:
 - Focus on meaningful analytical value rather than noise.
 
 Context awareness:
-- Consider that comments come from social media (e.g., TikTok), where emojis, mentions, and informal language are common.
-- Not all comments are equally meaningful; prioritise intent over surface-level expressions.
+- [ADDED] Consider that comments come from social media (e.g., TikTok), where emojis, mentions, and informal language are common.
+- [ADDED] Not all comments are equally meaningful; prioritise intent over surface-level expressions.
 
 Return valid JSON only in this exact format:
 {

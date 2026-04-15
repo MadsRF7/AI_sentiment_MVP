@@ -45,6 +45,9 @@ if "input_source_type" not in st.session_state:
 if "active_run_id" not in st.session_state:
     st.session_state["active_run_id"] = None
 
+if "audience_insight" not in st.session_state:
+    st.session_state["audience_insight"] = None
+
 
 st.title("🤖 AI sentiment Analysis MVP")
 st.caption(
@@ -62,8 +65,10 @@ with st.sidebar:
     st.write("✅ Positive / Neutral / Negative")
     st.write("✅ Overall summary")
     st.write("✅ Save results in database")
+    st.write("✅ Emotional resonance insight")
     st.write("❌ Trend spotting")
     st.write("❌ Engagement analysis")
+    st.write("Scraped rows:", len(raw_df))
 
 # -------------------------
 # VÆLG DATAKILDE
@@ -181,6 +186,7 @@ if stored_df is not None:
                 session.close()
 
                 st.session_state["active_run_id"] = run_id
+                st.session_state["audience_insight"] = None  # reset insight for new run
 
 # -------------------------
 # VIS SENESTE ANALYSE
@@ -221,6 +227,36 @@ if active_run_id is not None:
             overall_label = "Overall Mixed / Neutral"
 
         st.info(overall_label)
+
+        # -------------------------
+        # AUDIENCE INSIGHT / EMOTIONAL RESONANCE
+        # -------------------------
+        if st.session_state.get("audience_insight") is None:
+            try:
+                with st.spinner("Generating audience insight..."):
+                    insight = sentiment_service.generate_emotional_resonance(db_df)
+                st.session_state["audience_insight"] = insight
+            except Exception as e:
+                st.session_state["audience_insight"] = {
+                    "overall_sentiment": "Unavailable",
+                    "emotional_resonance": f"Could not generate audience insight: {e}",
+                    "content_implication": ""
+                }
+
+        insight = st.session_state.get("audience_insight")
+
+        if insight:
+            st.subheader("Audience Insight")
+
+            st.markdown(
+                f"**Overall audience sentiment:** {insight.get('overall_sentiment', 'N/A')}"
+            )
+            st.markdown(
+                f"**Emotional resonance:** {insight.get('emotional_resonance', 'N/A')}"
+            )
+            st.markdown(
+                f"**Content implication:** {insight.get('content_implication', 'N/A')}"
+            )
 
         # -------------------------
         # SENTIMENT DISTRIBUTION
