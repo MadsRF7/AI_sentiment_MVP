@@ -173,6 +173,8 @@ p, label, .stCaption {
 
 .results-table-scroll {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: 460px;   /* justér efter smag */
     border-radius: 16px;
     background: rgba(255,255,255,0.03);
 }
