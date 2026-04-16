@@ -372,7 +372,7 @@ class TikTokScraperService:
         self,
         video_url: str,
         max_scroll_iterations: int = 40,
-        stable_rounds_required: int = 8,
+        stable_rounds_required: int = 4,
         wait_after_load_ms: int = 5000,
         wait_between_rounds_ms: int = 1500,
     ) -> List[Dict]:

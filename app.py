@@ -13,6 +13,8 @@ from db.database import Base, engine, get_session
 from db.repositories.analysis_run_repository import AnalysisRunRepository
 from db.repositories.analysis_result_repository import AnalysisResultRepository
 
+from textwrap import dedent
+
 
 # -------------------------
 # PAGE CONFIG
@@ -116,8 +118,8 @@ def render_comment_card(username: str, text: str, sentiment: str):
         },
     )
 
-    safe_text = str(text).replace("<", "&lt;").replace(">", "&gt;")
     safe_username = str(username).replace("<", "&lt;").replace(">", "&gt;")
+    safe_text = str(text).replace("<", "&lt;").replace(">", "&gt;")
 
     html = f"""
     <div class="comment-card-v2 {config['card_class']}">
@@ -125,18 +127,14 @@ def render_comment_card(username: str, text: str, sentiment: str):
             <div class="comment-icon {config['icon_class']}">
                 <span>{config['emoji']}</span>
             </div>
-
             <div class="comment-content">
                 <div class="comment-username">@{safe_username}</div>
-                <div class="comment-text">"{safe_text}"</div>
-                <div class="sentiment-badge {config['badge_class']}">
-                    {config['label']}
-                </div>
+                <div class="comment-text">{safe_text}</div>
+                <div class="sentiment-badge {config['badge_class']}">{config['label']}</div>
             </div>
         </div>
     </div>
     """
-
     st.markdown(html, unsafe_allow_html=True)
 
 
@@ -262,7 +260,7 @@ with st.container():
                     st.session_state["raw_preview_df"] = raw_df
                     st.session_state["input_df"] = df
                     st.session_state["source_file_name"] = tiktok_url
-                    st.success("Comments fetched successfully.")
+                    st.success("Comments fetched successfully ✅")
                 except Exception as e:
                     st.error(f"Error scraping TikTok comments: {e}")
 
@@ -280,7 +278,7 @@ with st.container():
                 st.session_state["raw_preview_df"] = raw_df
                 st.session_state["input_df"] = df
                 st.session_state["source_file_name"] = uploaded_file.name
-                st.success(f"Loaded file: {uploaded_file.name}")
+                st.success(f"Loaded file: {uploaded_file.name} ✅")
             except Exception as e:
                 st.error(f"Error loading file: {e}")
 
@@ -376,7 +374,7 @@ if active_run_id is not None:
                     """
                     <div class="section-card neon-green preview-panel-header">
                         <div class="panel-eyebrow">◫</div>
-                        <h3 style="margin:0;">TIKTOK VIDEO COMMENTS</h3>
+                        <h3 style="margin:0;">PREVIEW OF COMMENTS</h3>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -387,11 +385,10 @@ if active_run_id is not None:
 
                 if not preview_df.empty:
                     for idx, (_, row) in enumerate(preview_df.iterrows()):
-                        comment_text = str(row["comment_text"]).strip()[:140]
+                        comment_text = str(row["comment_text"]).strip()
                         sentiment = str(row["sentiment"]).lower().strip()
                         username = demo_usernames[idx] if idx < len(demo_usernames) else f"user_{idx + 1}"
                         render_comment_card(username, comment_text, sentiment)
-
                 elif stored_raw_df is not None and not stored_raw_df.empty:
                     preview_only = stored_raw_df.head(4).copy()
                     comment_col = Settings.COMMENT_COLUMN
@@ -400,26 +397,28 @@ if active_run_id is not None:
                         fallback_sentiments = ["positive", "neutral", "negative", "positive"]
 
                         for idx, (_, row) in enumerate(preview_only.iterrows()):
-                            comment_text = str(row[comment_col]).strip()[:140]
+                            comment_text = str(row[comment_col]).strip()
                             username = demo_usernames[idx] if idx < len(demo_usernames) else f"user_{idx + 1}"
                             sentiment = fallback_sentiments[idx] if idx < len(fallback_sentiments) else "neutral"
                             render_comment_card(username, comment_text, sentiment)
 
-                with st.expander("Show raw preview table"):
-                    if stored_raw_df is not None:
-                        st.dataframe(stored_raw_df.head(200), use_container_width=True)
-                    else:
-                        st.info("No raw preview data available.")
 
             # -------------------------
             # RIGHT: RESULT CARD
             # -------------------------
             with right_col:
-                sentiment_html = f"""
-                <div class="section-card neon-orange results-panel-v2">
-                    <div class="panel-eyebrow">▥</div>
-                    <h3 style="margin:0;">SENTIMENT ANALYSIS RESULTS</h3>
+                st.markdown(
+                    dedent("""
+                    <div class="section-card neon-orange preview-panel-header">
+                        <div class="panel-eyebrow">▥</div>
+                        <h3 style="margin:0;">SENTIMENT ANALYSIS RESULTS</h3>
+                    </div>
+                    """),
+                    unsafe_allow_html=True,
+                )
 
+                result_html = dedent(f"""
+                <div class="section-card neon-orange results-panel-v2">
                     <div class="metric-big">
                         <div style="font-size:12px; opacity:.95; font-weight:800; letter-spacing:.05em;">
                             OVERALL SENTIMENT
@@ -431,21 +430,18 @@ if active_run_id is not None:
                             ↗ {positive_pct}% Positive sentiment
                         </div>
                     </div>
-
                     <div style="margin-bottom:7px; font-weight:800; font-size:14px;">
                         Positive <span style="float:right;">{positive_pct}%</span>
                     </div>
                     <div style="height:11px; background:#31476f; border-radius:999px; overflow:hidden; margin-bottom:14px;">
                         <div style="width:{positive_pct}%; height:100%; background:#20df82;"></div>
                     </div>
-
                     <div style="margin-bottom:7px; font-weight:800; font-size:14px;">
                         Neutral <span style="float:right;">{neutral_pct}%</span>
                     </div>
                     <div style="height:11px; background:#31476f; border-radius:999px; overflow:hidden; margin-bottom:14px;">
                         <div style="width:{neutral_pct}%; height:100%; background:#f5b942;"></div>
                     </div>
-
                     <div style="margin-bottom:7px; font-weight:800; font-size:14px;">
                         Negative <span style="float:right;">{negative_pct}%</span>
                     </div>
@@ -453,31 +449,31 @@ if active_run_id is not None:
                         <div style="width:{negative_pct}%; height:100%; background:#ff586d;"></div>
                     </div>
                 </div>
-                """
+                """)
 
-                st.markdown(sentiment_html, unsafe_allow_html=True)
+                st.markdown(result_html, unsafe_allow_html=True)
 
                 metric_col1, metric_col2 = st.columns(2)
 
                 with metric_col1:
                     st.markdown(
-                        f"""
+                        dedent(f"""
                         <div class="stat-tile stat-tile-blue">
                             <div class="stat-tile-label">TOTAL COMMENTS</div>
                             <div class="stat-tile-value">{total_count:,}</div>
                         </div>
-                        """,
+                        """),
                         unsafe_allow_html=True,
                     )
 
                 with metric_col2:
                     st.markdown(
-                        f"""
+                        dedent(f"""
                         <div class="stat-tile stat-tile-pink">
                             <div class="stat-tile-label">ANALYZED</div>
                             <div class="stat-tile-value">{total_count:,}</div>
                         </div>
-                        """,
+                        """),
                         unsafe_allow_html=True,
                     )
 
