@@ -297,7 +297,7 @@ stored_source_file_name = st.session_state.get("source_file_name")
 if stored_df is not None:
     st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
     st.subheader("Comments ready for analysis")
-    st.write(f"Rows with valid comments: **{len(stored_df)}**")
+    st.write(f"Number of comments scraped: **{len(stored_df)}**")
 
     if len(stored_df) == 0:
         st.warning(
@@ -546,7 +546,7 @@ with f1:
     st.markdown(
         """
         <div class="feature-card feature-blue">
-            <h3 style="margin-top:0;">TikTok Comments Scraper</h3>
+            <h3 style="margin-top:0;">Comment Scraper</h3>
             <p>Automatically extract comments from any TikTok video URL with author details and timestamps.</p>
         </div>
         """,
