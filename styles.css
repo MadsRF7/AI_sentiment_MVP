@@ -157,6 +157,145 @@ p, label, .stCaption {
     margin-bottom: 20px;
 }
 
+/* =========================
+   DETAILED RESULTS TABLE
+========================= */
+
+.results-table-card {
+    background: linear-gradient(180deg, #122454, #0d1c44);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-soft);
+    padding: 14px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.results-table-scroll {
+    overflow-x: auto;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+}
+
+.results-table-custom {
+    width: 100%;
+    min-width: 1100px;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.results-table-custom thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    text-align: left;
+    padding: 16px 18px;
+    background: linear-gradient(180deg, rgba(21, 40, 92, 0.96), rgba(16, 31, 74, 0.96));
+    color: #dfe7ff;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    white-space: nowrap;
+}
+
+.results-table-custom thead th:first-child {
+    border-top-left-radius: 14px;
+}
+
+.results-table-custom thead th:last-child {
+    border-top-right-radius: 14px;
+}
+
+.results-table-custom tbody tr {
+    transition: background 0.18s ease;
+}
+
+.results-table-custom tbody tr:hover {
+    background: rgba(255,255,255,0.04);
+}
+
+.results-table-custom tbody td {
+    padding: 15px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    vertical-align: top;
+    color: #f4f7ff;
+}
+
+.results-table-custom tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.results-table-custom td.col-index {
+    width: 72px;
+    color: #aebce3;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.results-table-custom td.col-comments {
+    min-width: 260px;
+    font-weight: 700;
+    color: #ffffff;
+    word-break: break-word;
+}
+
+.results-table-custom td.col-reason {
+    min-width: 360px;
+    color: #c6d2f0;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.results-table-custom td.col-model,
+.results-table-custom td.col-created {
+    white-space: nowrap;
+    color: #aebce3;
+    font-size: 13px;
+}
+
+/* Sentiment badges kun til results-tabellen */
+.results-sentiment-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1;
+    border: 1px solid rgba(255,255,255,0.12);
+    white-space: nowrap;
+}
+
+.results-sentiment-positive {
+    background: rgba(18, 224, 123, 0.14);
+    color: #d2ffe9;
+    border-color: rgba(18, 224, 123, 0.28);
+}
+
+.results-sentiment-neutral {
+    background: rgba(255, 191, 60, 0.14);
+    color: #fff3cf;
+    border-color: rgba(255, 191, 60, 0.28);
+}
+
+.results-sentiment-negative {
+    background: rgba(255, 96, 121, 0.14);
+    color: #ffd5dc;
+    border-color: rgba(255, 96, 121, 0.28);
+}
+
+.results-sentiment-default {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+    border-color: rgba(255,255,255,0.14);
+}
+
 /* ===== INPUT FELT / TIKTOK URL ===== */
 
 div[data-testid="stTextInput"] {
@@ -411,7 +550,8 @@ div[data-testid="stExpander"] {
     padding: 16px 18px;
     color: white;
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
-    margin-top: 10px;
+    margin-top: 2px;
+    display: relative;
 }
 
 .stat-tile-blue {

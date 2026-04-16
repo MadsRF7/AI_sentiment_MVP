@@ -137,6 +137,96 @@ def render_comment_card(username: str, text: str, sentiment: str):
     """
     st.markdown(html, unsafe_allow_html=True)
 
+def render_detailed_results_table(df: pd.DataFrame):
+    if df is None or df.empty:
+        st.info("No detailed results to show.")
+        return
+
+    def esc(value):
+        if pd.isna(value):
+            return ""
+        return (
+            str(value)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    def sentiment_badge(value):
+        sentiment = str(value).lower().strip()
+
+        badge_class = {
+            "positive": "results-sentiment-positive",
+            "neutral": "results-sentiment-neutral",
+            "negative": "results-sentiment-negative",
+        }.get(sentiment, "results-sentiment-default")
+
+        return f'<span class="results-sentiment-badge {badge_class}">{esc(value)}</span>'
+
+    render_df = df.rename(
+        columns={
+            "row_index": "#",
+            "comment_text": "Comments",
+            "sentiment": "Sentiment",
+            "reason": "Reason",
+            "model_name": "Model",
+            "created_at": "Created at",
+        }
+    ).copy()
+
+    desired_columns = ["#", "Comments", "Sentiment", "Reason", "Model", "Created at"]
+    existing_columns = [col for col in desired_columns if col in render_df.columns]
+    render_df = render_df[existing_columns]
+
+    rows_html = []
+    for _, row in render_df.iterrows():
+        row_html = "<tr>"
+
+        for col in existing_columns:
+            value = row[col]
+
+            if col == "Sentiment":
+                cell_html = sentiment_badge(value)
+            else:
+                cell_html = esc(value)
+
+            extra_class = ""
+            if col == "#":
+                extra_class = " col-index"
+            elif col == "Comments":
+                extra_class = " col-comments"
+            elif col == "Reason":
+                extra_class = " col-reason"
+            elif col == "Model":
+                extra_class = " col-model"
+            elif col == "Created at":
+                extra_class = " col-created"
+
+            row_html += f'<td class="{extra_class}">{cell_html}</td>'
+
+        row_html += "</tr>"
+        rows_html.append(row_html)
+
+    header_html = "".join([f"<th>{esc(col)}</th>" for col in existing_columns])
+    body_html = "".join(rows_html)
+
+    table_html = f"""
+    <div class="results-table-card">
+        <div class="results-table-scroll">
+            <table class="results-table-custom">
+                <thead>
+                    <tr>{header_html}</tr>
+                </thead>
+                <tbody>
+                    {body_html}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    """
+
+    st.markdown(table_html, unsafe_allow_html=True)
+
 
 # -------------------------
 # HERO
@@ -165,7 +255,7 @@ with c1:
         """
         <div class="section-card step-card">
             <h4 style="margin-top:0;">1. Paste URL</h4>
-            <p style="margin-bottom:0;">Insert any TikTok video link and press the button</p>
+            <p style="margin-bottom:0;">Insert any TikTok video link and click 'Fetch comments'</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -176,7 +266,7 @@ with c2:
         """
         <div class="section-card step-card">
             <h4 style="margin-top:0;">2. Fetch comments</h4>
-            <p style="margin-bottom:0;">Collect comments from TikTok or file upload</p>
+            <p style="margin-bottom:0;">Wait for browser to open, solve CAPTCHA, and comments will be scraped automatically</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -250,7 +340,7 @@ with st.container():
             else:
                 try:
                     with st.spinner("Opening browser and scraping comments..."):
-                        raw_df = tiktok_scraper_service.scrape_to_dataframe(
+                        raw_df, comment_count = tiktok_scraper_service.scrape_to_dataframe(
                             video_url=tiktok_url,
                             comment_column=Settings.COMMENT_COLUMN,
                         )
@@ -260,6 +350,7 @@ with st.container():
                     st.session_state["raw_preview_df"] = raw_df
                     st.session_state["input_df"] = df
                     st.session_state["source_file_name"] = tiktok_url
+                    st.session_state["tiktok_comment_count"] = comment_count
                     st.success("Comments fetched successfully ✅")
                 except Exception as e:
                     st.error(f"Error scraping TikTok comments: {e}")
@@ -278,7 +369,10 @@ with st.container():
                 st.session_state["raw_preview_df"] = raw_df
                 st.session_state["input_df"] = df
                 st.session_state["source_file_name"] = uploaded_file.name
+                st.session_state["tiktok_comment_count"] = None
                 st.success(f"Loaded file: {uploaded_file.name} ✅")
+                if "tiktok_comment_count" not in st.session_state:
+                    st.session_state["tiktok_comment_count"] = None
             except Exception as e:
                 st.error(f"Error loading file: {e}")
 
@@ -402,6 +496,7 @@ if active_run_id is not None:
                             sentiment = fallback_sentiments[idx] if idx < len(fallback_sentiments) else "neutral"
                             render_comment_card(username, comment_text, sentiment)
 
+            tiktok_total = st.session_state.get("tiktok_comment_count") or total_count
 
             # -------------------------
             # RIGHT: RESULT CARD
@@ -459,8 +554,8 @@ if active_run_id is not None:
                     st.markdown(
                         dedent(f"""
                         <div class="stat-tile stat-tile-blue">
-                            <div class="stat-tile-label">TOTAL COMMENTS</div>
-                            <div class="stat-tile-value">{total_count:,}</div>
+                            <div class="stat-tile-label">TOTAL COMMENTS ON TIKTOK.COM</div>
+                            <div class="stat-tile-value">{tiktok_total:,}</div>
                         </div>
                         """),
                         unsafe_allow_html=True,
@@ -470,7 +565,7 @@ if active_run_id is not None:
                     st.markdown(
                         dedent(f"""
                         <div class="stat-tile stat-tile-pink">
-                            <div class="stat-tile-label">ANALYZED</div>
+                            <div class="stat-tile-label">COMMENTS SCRAPED & ANALYZED</div>
                             <div class="stat-tile-value">{total_count:,}</div>
                         </div>
                         """),
@@ -482,20 +577,7 @@ if active_run_id is not None:
             # -------------------------
             st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
             st.subheader("Detailed results")
-
-            st.dataframe(
-                db_df.rename(
-                    columns={
-                        "row_index": "#",
-                        "comment_text": "Comments",
-                        "sentiment": "Sentiment",
-                        "reason": "Reason",
-                        "model_name": "Model",
-                        "created_at": "Created at",
-                    }
-                ),
-                use_container_width=True,
-            )
+            render_detailed_results_table(db_df)
 
             csv_data = db_df.to_csv(index=False).encode("utf-8")
 

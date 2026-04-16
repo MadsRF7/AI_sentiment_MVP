@@ -1,5 +1,6 @@
 import json
-from typing import List, Dict
+import re
+from typing import List, Dict, Optional, Tuple
 
 import agentql
 import pandas as pd
@@ -21,7 +22,7 @@ class TikTokScraperService:
         self,
         user_data_dir: str = "./playwright_profile",
         channel: str = "chrome",
-        headless: bool = False,  # TRUE = browser runs in background, FALSE = visible for debugging
+        headless: bool = False,
     ):
         self.user_data_dir = user_data_dir
         self.channel = channel
@@ -67,6 +68,91 @@ class TikTokScraperService:
         df = pd.DataFrame(comments)
         df = df.rename(columns={"text": comment_column})
         return df[[comment_column, "author"]]
+
+    @staticmethod
+    def parse_count_text(raw_text: str) -> Optional[int]:
+        """
+        Converts TikTok-style count text to int.
+        Examples:
+        - '167' -> 167
+        - '1,234' -> 1234
+        - '1.2K' -> 1200
+        - '2,5K' -> 2500
+        - '3M' -> 3000000
+        """
+        if not raw_text:
+            return None
+
+        text = raw_text.strip().upper().replace(" ", "")
+        text = text.replace("\u00A0", "")
+
+        # Keep digits, comma, dot, K, M
+        text = re.sub(r"[^0-9K M\.,]", "", text).replace(" ", "")
+        if not text:
+            return None
+
+        try:
+            if text.endswith("K"):
+                number = text[:-1].replace(",", ".")
+                return int(float(number) * 1_000)
+
+            if text.endswith("M"):
+                number = text[:-1].replace(",", ".")
+                return int(float(number) * 1_000_000)
+
+            # Plain integer with separators
+            plain = text.replace(".", "").replace(",", "")
+            return int(plain)
+        except Exception:
+            return None
+
+    def extract_comment_count(self, page) -> Optional[int]:
+        """
+        Tries multiple selectors / DOM fallbacks to get TikTok's official comment count.
+        """
+        selectors = [
+            'strong[data-e2e="comment-count"]',
+            '[data-e2e="comment-count"]',
+            'strong[data-e2e="browse-comment-count"]',
+            '[data-e2e="browse-comment-count"]',
+        ]
+
+        for selector in selectors:
+            try:
+                locator = page.locator(selector).first
+                if locator.count() > 0:
+                    raw_text = (locator.inner_text(timeout=2000) or "").strip()
+                    parsed = self.parse_count_text(raw_text)
+                    if parsed is not None:
+                        print(f"[comment_count] Fundet via selector '{selector}': {raw_text} -> {parsed}")
+                        return parsed
+            except Exception:
+                pass
+
+        try:
+            raw_text = page.evaluate("""
+            () => {
+                const candidates = [...document.querySelectorAll('strong, span, div')];
+                for (const el of candidates) {
+                    const dataE2E = (el.getAttribute('data-e2e') || '').toLowerCase();
+                    const text = (el.innerText || '').trim();
+
+                    if (dataE2E.includes('comment-count') && text) {
+                        return text;
+                    }
+                }
+                return null;
+            }
+            """)
+            parsed = self.parse_count_text(raw_text or "")
+            if parsed is not None:
+                print(f"[comment_count] Fundet via DOM fallback: {raw_text} -> {parsed}")
+                return parsed
+        except Exception:
+            pass
+
+        print("[comment_count] Kunne ikke finde comment count.")
+        return None
 
     def handle_cookie_popup(self, page):
         possible_buttons = [
@@ -375,7 +461,7 @@ class TikTokScraperService:
         stable_rounds_required: int = 4,
         wait_after_load_ms: int = 5000,
         wait_between_rounds_ms: int = 1500,
-    ) -> List[Dict]:
+    ) -> Tuple[List[Dict], Optional[int]]:
         all_comments = {}
 
         with sync_playwright() as playwright:
@@ -395,6 +481,8 @@ class TikTokScraperService:
 
                 self.handle_cookie_popup(page)
                 self.pause_video(page)
+
+                comment_count = self.extract_comment_count(page)
 
                 panel_opened = self.open_comment_panel(page)
                 if not panel_opened:
@@ -452,14 +540,20 @@ class TikTokScraperService:
 
                 final_comments = list(all_comments.values())
                 print(f"\n[SCRAPE] Færdig. Samlet antal unikke kommentarer scrapet: {len(final_comments)}")
-                return final_comments
+                print(f"[SCRAPE] TikTok official comment count: {comment_count}")
+                return final_comments, comment_count
 
             finally:
                 browser.close()
 
-    def scrape_to_dataframe(self, video_url: str, comment_column: str = "comment_text") -> pd.DataFrame:
-        comments = self.scrape_comments(video_url=video_url)
-        return self.comments_to_dataframe(comments, comment_column=comment_column)
+    def scrape_to_dataframe(
+        self,
+        video_url: str,
+        comment_column: str = "comment_text"
+    ) -> Tuple[pd.DataFrame, Optional[int]]:
+        comments, comment_count = self.scrape_comments(video_url=video_url)
+        df = self.comments_to_dataframe(comments, comment_column=comment_column)
+        return df, comment_count
 
     def save_comments_to_json(self, comments: List[Dict], output_path: str = "output_comments.json"):
         with open(output_path, "w", encoding="utf-8") as f:
