@@ -275,21 +275,21 @@ p, label, .stCaption {
 }
 
 .results-sentiment-positive {
-    background: rgba(18, 224, 123, 0.14);
-    color: #d2ffe9;
+    background: rgba(25, 178, 11, 0.14);
+    color: #28d42b;
     border-color: rgba(18, 224, 123, 0.28);
 }
 
 .results-sentiment-neutral {
-    background: rgba(255, 191, 60, 0.14);
-    color: #fff3cf;
+    background: rgba(249, 184, 54, 0.14);
+    color: #deb129;
     border-color: rgba(255, 191, 60, 0.28);
 }
 
 .results-sentiment-negative {
-    background: rgba(255, 96, 121, 0.14);
-    color: #ffd5dc;
-    border-color: rgba(255, 96, 121, 0.28);
+    background: rgba(252, 34, 34, 0.136);
+    color: #962828;
+    border-color: rgba(163, 18, 18, 0.594);
 }
 
 .results-sentiment-default {
@@ -439,7 +439,7 @@ div[data-testid="stExpander"] {
 }
 
 .comment-positive-v2 {
-    background: linear-gradient(90deg, rgba(10, 97, 54, 0.95), rgba(12, 79, 52, 0.78));
+    background: linear-gradient(90deg, rgba(10, 97, 42, 0.95), rgba(12, 79, 52, 0.78));
     border-left: 3px solid #17f28b;
 }
 
@@ -516,8 +516,8 @@ div[data-testid="stExpander"] {
 }
 
 .sentiment-badge-positive {
-    background: rgba(18, 224, 123, 0.14);
-    color: #d2ffe9;
+    background: rgba(15, 203, 71, 0.14);
+    color: #0c9d29;
 }
 
 .sentiment-badge-neutral {

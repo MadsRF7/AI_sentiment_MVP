@@ -169,12 +169,11 @@ def render_detailed_results_table(df: pd.DataFrame):
             "comment_text": "Comments",
             "sentiment": "Sentiment",
             "reason": "Reason",
-            "model_name": "Model",
-            "created_at": "Created at",
+            "created_at": "Date analyzed",
         }
     ).copy()
 
-    desired_columns = ["#", "Comments", "Sentiment", "Reason", "Model", "Created at"]
+    desired_columns = ["#", "Comments", "Sentiment", "Reason", "Date analyzed"]
     existing_columns = [col for col in desired_columns if col in render_df.columns]
     render_df = render_df[existing_columns]
 
@@ -577,9 +576,22 @@ if active_run_id is not None:
             # -------------------------
             st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
             st.subheader("Detailed results")
-            render_detailed_results_table(db_df)
+            sort_option = st.selectbox(
+            "Sort by sentiment",
+            ["Default", "Positive", "Neutral", "Negative"],
+            )
 
-            csv_data = db_df.to_csv(index=False).encode("utf-8")
+            sorted_df = db_df.copy()
+
+            if sort_option != "Default":
+                # prioriter valgt sentiment øverst
+                sorted_df["sort_key"] = sorted_df["sentiment"].apply(
+                    lambda x: 0 if x == sort_option.lower() else 1
+                )
+                sorted_df = sorted_df.sort_values(by="sort_key").drop(columns=["sort_key"])
+            render_detailed_results_table(sorted_df)
+
+            csv_data = sorted_df.to_csv(index=False).encode("utf-8")
 
             st.download_button(
                 label="Download results as CSV",
