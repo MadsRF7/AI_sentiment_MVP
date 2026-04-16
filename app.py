@@ -145,7 +145,7 @@ def render_comment_card(username: str, text: str, sentiment: str):
 # -------------------------
 st.markdown(
     """
-    <div style="text-align:center; padding: 18px 0 10px 0;">
+    <div style="text-align:center; padding: 30px 0 10px 0;">
         <div class="hero-badge">AI-Powered Sentiment Analysis</div>
         <div class="hero-title">
             Understand what your<br>
@@ -160,26 +160,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# -------------------------
-# GAME PLAN
-# -------------------------
-st.markdown(
-    """
-    <div class="ui-card" style="margin-top: 24px; margin-bottom: 18px;">
-        <h3 style="text-align:center; margin:0;">GAME PLAN</h3>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
     st.markdown(
         """
-        <div class="section-card">
+        <div class="section-card step-card">
             <h4 style="margin-top:0;">1. Paste URL</h4>
-            <p style="margin-bottom:0;">Insert any TikTok video link</p>
+            <p style="margin-bottom:0;">Insert any TikTok video link and press the button</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -188,7 +176,7 @@ with c1:
 with c2:
     st.markdown(
         """
-        <div class="section-card">
+        <div class="section-card step-card">
             <h4 style="margin-top:0;">2. Fetch comments</h4>
             <p style="margin-bottom:0;">Collect comments from TikTok or file upload</p>
         </div>
@@ -199,7 +187,7 @@ with c2:
 with c3:
     st.markdown(
         """
-        <div class="section-card">
+        <div class="section-card step-card">
             <h4 style="margin-top:0;">3. AI Analysis</h4>
             <p style="margin-bottom:0;">Classify comments as positive, neutral, or negative</p>
         </div>
@@ -210,7 +198,7 @@ with c3:
 with c4:
     st.markdown(
         """
-        <div class="section-card">
+        <div class="section-card step-card">
             <h4 style="margin-top:0;">4. Get Insights</h4>
             <p style="margin-bottom:0;">Review summary, sentiment split, and download CSV</p>
         </div>
@@ -244,7 +232,6 @@ except AttributeError:
 # INPUT CARD
 # -------------------------
 with st.container():
-    st.markdown('<div class="ui-card">', unsafe_allow_html=True)
 
     if source_type == "TikTok URL":
         input_col, button_col = st.columns([4, 1])
@@ -257,7 +244,7 @@ with st.container():
             )
 
         with button_col:
-            analyze_scrape_clicked = st.button("Analyze →", use_container_width=True)
+            analyze_scrape_clicked = st.button("Fetch comments", use_container_width=True)
 
         if analyze_scrape_clicked:
             if not tiktok_url.strip():

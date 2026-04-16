@@ -78,6 +78,7 @@ p, label, .stCaption {
     padding: 24px;
 }
 
+/* GENEREL CARD (bruges overalt) */
 .section-card {
     background: linear-gradient(180deg, #122454, #0d1c44);
     border-radius: var(--radius-xl);
@@ -85,6 +86,32 @@ p, label, .stCaption {
     padding: 22px;
     box-shadow: var(--shadow-soft);
     margin-bottom: 16px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* KUN til de 4 Game Plan bokse */
+.step-card {
+    min-height: 170px;          /* justér hvis du vil */
+    justify-content: space-between; /* giver bedre balance */
+}
+
+.step-card h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+
+    line-height: 1.15;
+    font-size: 20px;
+    font-weight: 800;
+
+    min-height: 42px;   /* 🔥 vigtig */
+}
+
+.step-card {
+    min-height: 170px;
+    justify-content: flex-start;
 }
 
 .neon-green {
@@ -296,6 +323,7 @@ div[data-testid="stExpander"] {
     letter-spacing: 0.01em;
 }
 
+/* Adjust padding for section cards in the game plan section to create a more compact look */
 .section-card.neon-green,
 .section-card.neon-orange {
     padding: 18px 20px;
