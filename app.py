@@ -66,9 +66,6 @@ if "raw_preview_df" not in st.session_state:
 if "source_file_name" not in st.session_state:
     st.session_state["source_file_name"] = None
 
-if "input_source_type" not in st.session_state:
-    st.session_state["input_source_type"] = "TikTok URL"
-
 if "active_run_id" not in st.session_state:
     st.session_state["active_run_id"] = None
 
@@ -239,7 +236,7 @@ st.markdown(
             <span class="accent">TikTok audience really thinks</span>
         </div>
         <div class="hero-subtitle">
-            Paste any TikTok video URL or upload a file and instantly analyze comments
+            Paste any TikTok video URL and instantly analyze comments
             to uncover emotional insights, trends, and audience sentiment.
         </div>
     </div>
@@ -254,7 +251,7 @@ with c1:
         """
         <div class="section-card step-card">
             <h4 style="margin-top:0;">1. Paste URL</h4>
-            <p style="margin-bottom:0;">Insert any TikTok video link and click 'Fetch comments'</p>
+            <p>Automatically extract comments from any TikTok video URL with author details and timestamps.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -276,7 +273,7 @@ with c3:
         """
         <div class="section-card step-card">
             <h4 style="margin-top:0;">3. AI Analysis</h4>
-            <p style="margin-bottom:0;">Classify comments as positive, neutral, or negative</p>
+            <p style="margin-bottom:0;">Classify comments as positive, neutral, or negative with a reason for each classification</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -287,7 +284,7 @@ with c4:
         """
         <div class="section-card step-card">
             <h4 style="margin-top:0;">4. Get Insights</h4>
-            <p style="margin-bottom:0;">Review summary, sentiment split, and download CSV</p>
+            <p style="margin-bottom:0;">Review summary, sort by sentiment, and download the result as a CSV-file</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -295,87 +292,50 @@ with c4:
 
 
 # -------------------------
-# INPUT SOURCE
+# INPUT CARD
 # -------------------------
 st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
 
-try:
-    source_type = st.segmented_control(
-        "Input source",
-        options=["TikTok URL", "Upload file"],
-        default="TikTok URL",
-        key="input_source_type",
-    )
-except AttributeError:
-    source_type = st.radio(
-        "Input source",
-        ["TikTok URL", "Upload file"],
-        horizontal=True,
-        key="input_source_type",
-    )
-
-
-# -------------------------
-# INPUT CARD
-# -------------------------
 with st.container():
+    input_col, button_col = st.columns([4, 1])
 
-    if source_type == "TikTok URL":
-        input_col, button_col = st.columns([4, 1])
-
-        with input_col:
-            tiktok_url = st.text_input(
-                "Paste TikTok video URL",
-                placeholder="https://www.tiktok.com/@username/video/1234567890",
-                label_visibility="collapsed",
-            )
-
-        with button_col:
-            analyze_scrape_clicked = st.button("Fetch comments", use_container_width=True)
-
-        if analyze_scrape_clicked:
-            if not tiktok_url.strip():
-                st.warning("Please enter a TikTok URL.")
-            else:
-                try:
-                    with st.spinner("Opening browser and scraping comments..."):
-                        raw_df, comment_count = tiktok_scraper_service.scrape_to_dataframe(
-                            video_url=tiktok_url,
-                            comment_column=Settings.COMMENT_COLUMN,
-                        )
-
-                    df = file_service.normalize_comments(raw_df)
-
-                    st.session_state["raw_preview_df"] = raw_df
-                    st.session_state["input_df"] = df
-                    st.session_state["source_file_name"] = tiktok_url
-                    st.session_state["tiktok_comment_count"] = comment_count
-                    st.success("Comments fetched successfully ✅")
-                except Exception as e:
-                    st.error(f"Error scraping TikTok comments: {e}")
-
-    else:
-        uploaded_file = st.file_uploader(
-            "Upload your CSV or Excel file",
-            type=["csv", "xls", "xlsx"],
+    with input_col:
+        tiktok_url = st.text_input(
+            "Paste TikTok video URL",
+            placeholder="https://www.tiktok.com/@username/video/1234567890",
+            label_visibility="collapsed",
         )
 
-        if uploaded_file is not None:
+    with button_col:
+        analyze_scrape_clicked = st.button("Fetch comments", use_container_width=True)
+
+    if analyze_scrape_clicked:
+        if not tiktok_url.strip():
+            st.warning("Please enter a TikTok URL.")
+        else:
             try:
-                raw_df = file_service.load_file(uploaded_file)
+                with st.spinner("Opening browser and scraping comments..."):
+                    raw_df, comment_count = tiktok_scraper_service.scrape_to_dataframe(
+                        video_url=tiktok_url,
+                        comment_column=Settings.COMMENT_COLUMN,
+                    )
+
                 df = file_service.normalize_comments(raw_df)
 
                 st.session_state["raw_preview_df"] = raw_df
                 st.session_state["input_df"] = df
-                st.session_state["source_file_name"] = uploaded_file.name
-                st.session_state["tiktok_comment_count"] = None
-                st.success(f"Loaded file: {uploaded_file.name} ✅")
-                if "tiktok_comment_count" not in st.session_state:
-                    st.session_state["tiktok_comment_count"] = None
+                st.session_state["source_file_name"] = tiktok_url
+                st.session_state["tiktok_comment_count"] = comment_count
+                st.markdown(
+                    """
+                    <div class="success-banner">
+                        Comments fetched successfully ✅
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
             except Exception as e:
-                st.error(f"Error loading file: {e}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+                st.error(f"Error scraping TikTok comments: {e}")
 
 
 # -------------------------
@@ -421,7 +381,14 @@ if stored_df is not None:
 
                     progress_bar.empty()
                     st.session_state["active_run_id"] = run_id
-                    st.success("Sentiment analysis completed.")
+                    st.markdown(
+                        """
+                        <div class="success-banner">
+                            Sentiment analysis completed
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
                 finally:
                     session.close()
 
@@ -593,27 +560,17 @@ if active_run_id is not None:
 
             csv_data = sorted_df.to_csv(index=False).encode("utf-8")
 
+            st.markdown("<div class='download-btn-wrapper'>", unsafe_allow_html=True)
+
             st.download_button(
                 label="Download results as CSV",
                 data=csv_data,
                 file_name=f"analysis_run_{active_run_id}.csv",
                 mime="text/csv",
+                use_container_width=False,
             )
 
-            negative_df = db_df[db_df["sentiment"] == "negative"][["comment_text", "reason"]].copy()
-
-            if not negative_df.empty:
-                st.markdown("<div style='margin-top: 22px;'></div>", unsafe_allow_html=True)
-                st.subheader("Most negative comments")
-                st.dataframe(
-                    negative_df.rename(
-                        columns={
-                            "comment_text": "Comments",
-                            "reason": "Reason",
-                        }
-                    ),
-                    use_container_width=True,
-                )
+            st.markdown("</div>", unsafe_allow_html=True)
 
         else:
             st.info("No results found for the latest run.")
