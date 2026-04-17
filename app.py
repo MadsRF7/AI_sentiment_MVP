@@ -329,7 +329,7 @@ with st.container():
                 st.markdown(
                     """
                     <div class="success-banner">
-                        Comments fetched successfully ✅
+                        Comments fetched successfully
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -472,7 +472,7 @@ if active_run_id is not None:
                     dedent("""
                     <div class="section-card neon-orange preview-panel-header">
                         <div class="panel-eyebrow">▥</div>
-                        <h3 style="margin:0;">SENTIMENT ANALYSIS RESULTS</h3>
+                        <h3 style="margin:0;">SENTIMENT ANALYSIS SUMMARY</h3>
                     </div>
                     """),
                     unsafe_allow_html=True,

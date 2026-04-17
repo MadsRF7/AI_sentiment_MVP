@@ -40,6 +40,7 @@ class TikTokScraperService:
         }
         """)
 
+# This method takes a single comment as input, sends it to the language model for classification, and returns the sentiment and reason. It includes robust error handling to manage potential issues with the model's response.
     @staticmethod
     def normalize_comment(comment: Dict) -> Dict:
         text = (comment.get("text") or "").strip()
