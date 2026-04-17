@@ -716,3 +716,55 @@ hr {
 .scrape-status-box.success .scrape-status-count {
     color: #B9FFD3;
 }
+
+.analysis-eta-text {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #dce7ff;
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.scrape-status-box {
+    margin-top: 10px;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.scrape-status-message {
+    font-size: 15px;
+    font-weight: 600;
+    color: #eaf1ff;
+}
+
+.scrape-status-count {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #b8c7e6;
+}
+
+.scrape-status-box.success {
+    background: rgba(32, 223, 130, 0.12);
+    border: 1px solid rgba(32, 223, 130, 0.45);
+}
+
+.scrape-status-box.success .scrape-status-message {
+    color: #7CFFB2;
+}
+
+.scrape-status-box.success .scrape-status-count {
+    color: #B9FFD3;
+}
+
+.analysis-eta-text {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: #dce7ff;
+    margin-top: 20px;
+    margin-bottom: 8px;
+}

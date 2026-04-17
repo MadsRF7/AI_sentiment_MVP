@@ -15,6 +15,7 @@ from db.repositories.analysis_result_repository import AnalysisResultRepository
 
 from textwrap import dedent
 from typing import Optional
+import time
 
 
 # -------------------------
@@ -70,10 +71,52 @@ if "source_file_name" not in st.session_state:
 if "active_run_id" not in st.session_state:
     st.session_state["active_run_id"] = None
 
+if "scrape_status_message" not in st.session_state:
+    st.session_state["scrape_status_message"] = None
+
+if "scrape_status_count" not in st.session_state:
+    st.session_state["scrape_status_count"] = None
+
+if "scrape_status_success" not in st.session_state:
+    st.session_state["scrape_status_success"] = False
+
 
 # -------------------------
 # HELPERS
 # -------------------------
+
+import time
+
+
+def format_eta(seconds: float) -> str:
+    seconds = max(0, int(round(seconds)))
+
+    if seconds < 60:
+        return f"{seconds} sec"
+
+    minutes, remaining_seconds = divmod(seconds, 60)
+
+    if minutes < 60:
+        if remaining_seconds == 0:
+            return f"{minutes} min"
+        return f"{minutes} min {remaining_seconds} sec"
+
+    hours, remaining_minutes = divmod(minutes, 60)
+    if remaining_minutes == 0:
+        return f"{hours} hr"
+    return f"{hours} hr {remaining_minutes} min"
+
+
+def render_analysis_eta(container, message: str):
+    container.markdown(
+        f"""
+        <div class="analysis-eta-text">
+            {message}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 def safe_percent(count: int, total: int) -> int:
     if total == 0:
         return 0
@@ -99,6 +142,36 @@ def render_scrape_status(
         <div class="{box_class}">
             <div class="scrape-status-message">{message}</div>
             {count_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def format_eta(seconds: float) -> str:
+    seconds = max(0, int(round(seconds)))
+
+    if seconds < 60:
+        return f"{seconds} sec"
+
+    minutes, remaining_seconds = divmod(seconds, 60)
+
+    if minutes < 60:
+        if remaining_seconds == 0:
+            return f"{minutes} min"
+        return f"{minutes} min {remaining_seconds} sec"
+
+    hours, remaining_minutes = divmod(minutes, 60)
+    if remaining_minutes == 0:
+        return f"{hours} hr"
+    return f"{hours} hr {remaining_minutes} min"
+
+
+def render_analysis_eta(container, message: str):
+    container.markdown(
+        f"""
+        <div class="analysis-eta-text">
+            {message}
         </div>
         """,
         unsafe_allow_html=True,
@@ -339,17 +412,27 @@ with st.container():
             st.warning("Please enter a TikTok URL.")
         else:
             try:
-                # 👇 Status UI container
                 status_placeholder = st.empty()
 
-                # 👇 Initial besked
-                render_scrape_status(status_placeholder, "Opening TikTok video...")
+                # initial status
+                st.session_state["scrape_status_message"] = "Opening TikTok video..."
+                st.session_state["scrape_status_count"] = None
+                st.session_state["scrape_status_success"] = False
 
-                # 👇 Callback fra scraper
+                render_scrape_status(
+                    status_placeholder,
+                    st.session_state["scrape_status_message"],
+                    st.session_state["scrape_status_count"],
+                    st.session_state["scrape_status_success"],
+                )
+
                 def update_scrape_status(message, count=None):
-                    render_scrape_status(status_placeholder, message, count)
+                    st.session_state["scrape_status_message"] = message
+                    st.session_state["scrape_status_count"] = count
+                    st.session_state["scrape_status_success"] = False
 
-                # 👇 Kør scraping (NU med live status)
+                    render_scrape_status(status_placeholder, message, count, False)
+
                 raw_df, comment_count = tiktok_scraper_service.scrape_to_dataframe(
                     video_url=tiktok_url,
                     comment_column=Settings.COMMENT_COLUMN,
@@ -363,16 +446,24 @@ with st.container():
                 st.session_state["source_file_name"] = tiktok_url
                 st.session_state["tiktok_comment_count"] = comment_count
 
-                # 👇 Final status (i stedet for spinner-success)
-                render_scrape_status(
-                    status_placeholder,
-                    "Comments collected and ready for analysis",
-                    len(df),
-                    is_success=True,
-                )
+                # final green success status
+                st.session_state["scrape_status_message"] = "Comments collected and ready for analysis"
+                st.session_state["scrape_status_count"] = len(df)
+                st.session_state["scrape_status_success"] = True
+
+                st.rerun()
 
             except Exception as e:
                 st.error(f"Error scraping TikTok comments: {e}")
+
+if st.session_state.get("scrape_status_message"):
+    scrape_status_placeholder = st.empty()
+    render_scrape_status(
+        scrape_status_placeholder,
+        st.session_state.get("scrape_status_message"),
+        st.session_state.get("scrape_status_count"),
+        st.session_state.get("scrape_status_success", False),
+    )
 
 
 # -------------------------
@@ -408,15 +499,41 @@ if stored_df is not None:
                         analysis_result_repo=analysis_result_repo,
                     )
 
+                    analysis_eta_placeholder = st.empty()
                     progress_bar = st.progress(0.0)
+
+                    analysis_start_time = time.time()
+
+                    def update_analysis_progress(progress_value: float):
+                        progress_bar.progress(progress_value)
+
+                        elapsed = time.time() - analysis_start_time
+
+                        if progress_value is None or progress_value <= 0:
+                            render_analysis_eta(analysis_eta_placeholder, "Estimating remaining time...")
+                            return
+
+                        if progress_value >= 1.0:
+                            render_analysis_eta(analysis_eta_placeholder, "Finalizing analysis...")
+                            return
+
+                        estimated_total_time = elapsed / progress_value
+                        remaining_time = estimated_total_time - elapsed
+
+                        render_analysis_eta(
+                            analysis_eta_placeholder,
+                            f"Estimated time remaining: {format_eta(remaining_time)}",
+                        )
 
                     run_id, results = analysis_service.run_analysis(
                         df=stored_df,
                         source_file=stored_source_file_name,
-                        progress_callback=progress_bar.progress,
+                        progress_callback=update_analysis_progress,
                     )
 
                     progress_bar.empty()
+                    analysis_eta_placeholder.empty()
+
                     st.session_state["active_run_id"] = run_id
                     st.markdown(
                         """
