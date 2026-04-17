@@ -14,6 +14,7 @@ from db.repositories.analysis_run_repository import AnalysisRunRepository
 from db.repositories.analysis_result_repository import AnalysisResultRepository
 
 from textwrap import dedent
+from typing import Optional
 
 
 # -------------------------
@@ -78,6 +79,30 @@ def safe_percent(count: int, total: int) -> int:
         return 0
     return round((count / total) * 100)
 
+from typing import Optional
+
+def render_scrape_status(
+    container,
+    message: str,
+    count: Optional[int] = None,
+    is_success: bool = False,
+):
+    count_html = ""
+    if count is not None:
+        count_label = "comments collected" if is_success else "comments collected so far"
+        count_html = f"<div class='scrape-status-count'>{count} {count_label}</div>"
+
+    box_class = "scrape-status-box success" if is_success else "scrape-status-box"
+
+    container.markdown(
+        f"""
+        <div class="{box_class}">
+            <div class="scrape-status-message">{message}</div>
+            {count_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 def render_comment_card(username: str, text: str, sentiment: str):
     sentiment = str(sentiment).lower().strip()
@@ -314,11 +339,22 @@ with st.container():
             st.warning("Please enter a TikTok URL.")
         else:
             try:
-                with st.spinner("Opening browser and scraping comments..."):
-                    raw_df, comment_count = tiktok_scraper_service.scrape_to_dataframe(
-                        video_url=tiktok_url,
-                        comment_column=Settings.COMMENT_COLUMN,
-                    )
+                # 👇 Status UI container
+                status_placeholder = st.empty()
+
+                # 👇 Initial besked
+                render_scrape_status(status_placeholder, "Opening TikTok video...")
+
+                # 👇 Callback fra scraper
+                def update_scrape_status(message, count=None):
+                    render_scrape_status(status_placeholder, message, count)
+
+                # 👇 Kør scraping (NU med live status)
+                raw_df, comment_count = tiktok_scraper_service.scrape_to_dataframe(
+                    video_url=tiktok_url,
+                    comment_column=Settings.COMMENT_COLUMN,
+                    status_callback=update_scrape_status,
+                )
 
                 df = file_service.normalize_comments(raw_df)
 
@@ -326,14 +362,15 @@ with st.container():
                 st.session_state["input_df"] = df
                 st.session_state["source_file_name"] = tiktok_url
                 st.session_state["tiktok_comment_count"] = comment_count
-                st.markdown(
-                    """
-                    <div class="success-banner">
-                        Comments fetched successfully
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+
+                # 👇 Final status (i stedet for spinner-success)
+                render_scrape_status(
+                    status_placeholder,
+                    "Comments collected and ready for analysis",
+                    len(df),
+                    is_success=True,
                 )
+
             except Exception as e:
                 st.error(f"Error scraping TikTok comments: {e}")
 

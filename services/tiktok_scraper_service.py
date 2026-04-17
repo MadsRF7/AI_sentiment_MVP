@@ -1,6 +1,6 @@
 import json
 import re
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Callable
 
 import agentql
 import pandas as pd
@@ -40,7 +40,6 @@ class TikTokScraperService:
         }
         """)
 
-# This method takes a single comment as input, sends it to the language model for classification, and returns the sentiment and reason. It includes robust error handling to manage potential issues with the model's response.
     @staticmethod
     def normalize_comment(comment: Dict) -> Dict:
         text = (comment.get("text") or "").strip()
@@ -72,22 +71,11 @@ class TikTokScraperService:
 
     @staticmethod
     def parse_count_text(raw_text: str) -> Optional[int]:
-        """
-        Converts TikTok-style count text to int.
-        Examples:
-        - '167' -> 167
-        - '1,234' -> 1234
-        - '1.2K' -> 1200
-        - '2,5K' -> 2500
-        - '3M' -> 3000000
-        """
         if not raw_text:
             return None
 
         text = raw_text.strip().upper().replace(" ", "")
         text = text.replace("\u00A0", "")
-
-        # Keep digits, comma, dot, K, M
         text = re.sub(r"[^0-9K M\.,]", "", text).replace(" ", "")
         if not text:
             return None
@@ -101,16 +89,12 @@ class TikTokScraperService:
                 number = text[:-1].replace(",", ".")
                 return int(float(number) * 1_000_000)
 
-            # Plain integer with separators
             plain = text.replace(".", "").replace(",", "")
             return int(plain)
         except Exception:
             return None
 
     def extract_comment_count(self, page) -> Optional[int]:
-        """
-        Tries multiple selectors / DOM fallbacks to get TikTok's official comment count.
-        """
         selectors = [
             'strong[data-e2e="comment-count"]',
             '[data-e2e="comment-count"]',
@@ -223,65 +207,6 @@ class TikTokScraperService:
             pass
 
         return False
-
-    def find_comment_scroll_container(self, page):
-        try:
-            result = page.evaluate("""
-                () => {
-                    const commentSelectors = [
-                        "[data-e2e='comment-level-1']",
-                        "[data-e2e='comment-item']",
-                        "[data-e2e*='comment-level']",
-                        "[data-e2e*='comment-username']",
-                        "div[class*='CommentItem']",
-                        "div[class*='DivCommentItemContainer']"
-                    ];
-
-                    function isScrollable(node) {
-                        if (!node || node.nodeType !== 1) return false;
-                        const style = window.getComputedStyle(node);
-                        const overflowY = style.overflowY;
-                        return (
-                            (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
-                            node.scrollHeight > node.clientHeight
-                        );
-                    }
-
-                    for (const selector of commentSelectors) {
-                        const items = document.querySelectorAll(selector);
-                        if (!items.length) continue;
-
-                        for (const item of items) {
-                            let current = item.parentElement;
-                            while (current) {
-                                if (isScrollable(current)) {
-                                    return {
-                                        found: true,
-                                        selectorUsed: selector,
-                                        tagName: current.tagName,
-                                        className: current.className || "",
-                                        dataE2E: current.getAttribute("data-e2e") || "",
-                                        scrollTop: current.scrollTop || 0,
-                                        scrollHeight: current.scrollHeight || 0,
-                                        clientHeight: current.clientHeight || 0,
-                                        overflowY: window.getComputedStyle(current).overflowY || ""
-                                    };
-                                }
-                                current = current.parentElement;
-                            }
-                        }
-                    }
-
-                    return { found: false };
-                }
-            """)
-
-            print(f"[find_container] Resultat: {result}")
-            return result
-
-        except Exception as e:
-            print(f"[find_container] Fejl: {e}")
-            return {"found": False, "error": str(e)}
 
     def extract_visible_comments_from_dom(self, page) -> List[Dict]:
         selectors = [
@@ -462,8 +387,14 @@ class TikTokScraperService:
         stable_rounds_required: int = 4,
         wait_after_load_ms: int = 5000,
         wait_between_rounds_ms: int = 1500,
+        status_callback: Optional[Callable[[str, Optional[int]], None]] = None,
     ) -> Tuple[List[Dict], Optional[int]]:
         all_comments = {}
+
+        def emit_status(message: str, count: Optional[int] = None):
+            print(f"[UI_STATUS] {message} | count={count}")
+            if status_callback:
+                status_callback(message, count)
 
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch_persistent_context(
@@ -476,8 +407,12 @@ class TikTokScraperService:
             page = browser.new_page()
 
             try:
+                emit_status("Opening TikTok video...")
                 print(f"\n[SCRAPE] Åbner video: {video_url}")
+
                 page.goto(video_url, wait_until="domcontentloaded", timeout=60000)
+
+                emit_status("If TikTok asks for verification, please solve CAPTCHA in the browser window")
                 page.wait_for_timeout(wait_after_load_ms)
 
                 self.handle_cookie_popup(page)
@@ -485,21 +420,25 @@ class TikTokScraperService:
 
                 comment_count = self.extract_comment_count(page)
 
+                emit_status("Opening comment section...")
                 panel_opened = self.open_comment_panel(page)
                 if not panel_opened:
-                    raise RuntimeError("Kunne ikke åbne TikTok kommentarpanelet automatisk.")
+                    raise RuntimeError("Could not open the TikTok comment section automatically.")
 
+                emit_status("Comment section opened")
                 print("[SCRAPE] Kommentarpanel åbnet.")
                 page.wait_for_timeout(3000)
 
                 stable_rounds = 0
                 previous_unique_count = 0
 
+                emit_status("Scanning comments...", 0)
                 self.scroll_comment_panel(page, scroll_rounds=4, pause_ms=1200)
 
                 for iteration in range(1, max_scroll_iterations + 1):
                     print(f"\n========== ITERATION {iteration}/{max_scroll_iterations} ==========")
 
+                    emit_status("Scanning comments...", len(all_comments))
                     page.wait_for_timeout(wait_between_rounds_ms)
 
                     visible_comments = self.extract_visible_comments_from_dom(page)
@@ -520,6 +459,11 @@ class TikTokScraperService:
                     print(f"[SCRAPE] Nye unikke kommentarer: {added_this_round}")
                     print(f"[SCRAPE] Samlet unikke kommentarer: {current_unique_count}")
 
+                    if added_this_round > 0:
+                        emit_status("Found more comments", current_unique_count)
+                    else:
+                        emit_status("No new comments found in this pass", current_unique_count)
+
                     if current_unique_count == previous_unique_count:
                         stable_rounds += 1
                         print(f"[SCRAPE] Ingen vækst. Stable rounds: {stable_rounds}/{stable_rounds_required}")
@@ -529,9 +473,12 @@ class TikTokScraperService:
                         print("[SCRAPE] Der kom nye kommentarer ind.")
 
                     if stable_rounds >= stable_rounds_required:
+                        emit_status("No more comments found", current_unique_count)
+                        emit_status("Finalizing comments...", current_unique_count)
                         print("[SCRAPE] Stopper: ingen vækst i tilstrækkeligt mange runder.")
                         break
 
+                    emit_status("Looking for more comments...", current_unique_count)
                     scrolled = self.scroll_comment_panel(
                         page,
                         scroll_rounds=2,
@@ -540,6 +487,8 @@ class TikTokScraperService:
                     print(f"[SCRAPE] Scroll-resultat: {scrolled}")
 
                 final_comments = list(all_comments.values())
+                emit_status("Comments collected and ready for analysis", len(final_comments))
+
                 print(f"\n[SCRAPE] Færdig. Samlet antal unikke kommentarer scrapet: {len(final_comments)}")
                 print(f"[SCRAPE] TikTok official comment count: {comment_count}")
                 return final_comments, comment_count
@@ -550,9 +499,13 @@ class TikTokScraperService:
     def scrape_to_dataframe(
         self,
         video_url: str,
-        comment_column: str = "comment_text"
+        comment_column: str = "comment_text",
+        status_callback: Optional[Callable[[str, Optional[int]], None]] = None,
     ) -> Tuple[pd.DataFrame, Optional[int]]:
-        comments, comment_count = self.scrape_comments(video_url=video_url)
+        comments, comment_count = self.scrape_comments(
+            video_url=video_url,
+            status_callback=status_callback,
+        )
         df = self.comments_to_dataframe(comments, comment_column=comment_column)
         return df, comment_count
 
