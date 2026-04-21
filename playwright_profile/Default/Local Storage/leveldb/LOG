@@ -1,3 +1,14 @@
-2026/04/17-10:43:24.978 2aeaf98 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
-2026/04/17-10:43:24.984 2aeaf98 Recovering log #82
-2026/04/17-10:43:24.985 2aeaf98 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/000082.log 
+2026/04/21-11:17:08.922 2b95589 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/04/21-11:17:08.926 2b95589 Recovering log #82
+2026/04/21-11:17:08.927 2b95589 Level-0 table #84: started
+2026/04/21-11:17:08.935 2b95589 Level-0 table #84: 20676 bytes OK
+2026/04/21-11:17:08.941 2b95589 Delete type=0 #82
+2026/04/21-11:17:08.944 2b9558c Compacting 4@0 + 1@1 files
+2026/04/21-11:17:08.950 2b9558c Generated table #86@0: 72 keys, 94900 bytes
+2026/04/21-11:17:08.950 2b9558c Compacted 4@0 + 1@1 files => 94900 bytes
+2026/04/21-11:17:08.951 2b9558c compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/04/21-11:17:08.952 2b9558c Delete type=2 #77
+2026/04/21-11:17:08.952 2b9558c Delete type=2 #74
+2026/04/21-11:17:08.952 2b9558c Delete type=2 #82
+2026/04/21-11:17:08.952 2b9558c Delete type=2 #79
+2026/04/21-11:17:08.952 2b9558c Delete type=2 #84
