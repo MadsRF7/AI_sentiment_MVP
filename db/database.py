@@ -3,6 +3,7 @@ from sqlalchemy.orm import (
     declarative_base,
     sessionmaker,
 )  # for defining the database models and managing database sessions
+
 from app.core.config import Settings
 
 Base = declarative_base()  # base class for our database models

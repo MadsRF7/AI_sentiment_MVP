@@ -16,7 +16,8 @@ from app.ui.components import (
     render_detailed_results_table,
     render_scrape_status,
 )
-
+from app.ui.state import initialize_session_state
+from app.ui.styles import load_css
 from db.database import Base, engine, get_session
 from db.repositories.analysis_result_repository import AnalysisResultRepository
 from db.repositories.analysis_run_repository import AnalysisRunRepository
@@ -24,12 +25,15 @@ from db.repositories.analysis_run_repository import AnalysisRunRepository
 # -------------------------
 # PAGE CONFIG
 # -------------------------
+initialize_session_state()
 st.set_page_config(
     page_title=Settings.PAGE_TITLE,
     page_icon=Settings.PAGE_ICON,
     layout=Settings.LAYOUT,
 )
 
+initialize_session_state()
+load_css()
 
 # -------------------------
 # DB INIT

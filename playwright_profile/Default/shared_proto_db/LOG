@@ -1,6 +1,3 @@
-2026/04/21-11:17:09.540 2b95555 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/shared_proto_db/MANIFEST-000001
-2026/04/21-11:17:09.540 2b95555 Recovering log #3
-2026/04/21-11:17:09.543 2b95555 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/shared_proto_db/000003.log 
-2026/04/21-11:17:14.757 2b9553d Level-0 table #5: started
-2026/04/21-11:17:14.767 2b9553d Level-0 table #5: 72148 bytes OK
-2026/04/21-11:17:14.772 2b9553d Delete type=0 #3
+2026/04/22-15:35:33.651 4ec78 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/shared_proto_db/MANIFEST-000001
+2026/04/22-15:35:33.653 4ec78 Recovering log #4
+2026/04/22-15:35:33.653 4ec78 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/shared_proto_db/000004.log 

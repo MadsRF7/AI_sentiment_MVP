@@ -1,8 +1,7 @@
 import json
 import re
-from typing import List, Dict, Optional, Tuple, Callable
+from typing import Callable, Dict, List, Optional, Tuple
 
-import agentql
 import pandas as pd
 from playwright.sync_api import sync_playwright
 

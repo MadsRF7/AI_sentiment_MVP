@@ -1,7 +1,9 @@
 import uuid
+
 from sqlalchemy import (
     func,
 )  # Import func for using SQL functions like now() in the model
+
 from db.models import AnalysisRun
 
 

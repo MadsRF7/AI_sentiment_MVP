@@ -1,4 +1,5 @@
 import pandas as pd  # for data manipulation
+
 from app.core.config import Settings  # for configuration management
 
 

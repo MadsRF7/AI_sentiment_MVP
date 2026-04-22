@@ -1,6 +1,8 @@
 import json  # for debugging purposes, to print the raw response from the API in a readable format
+
 import pandas as pd  # for data manipulation and analysis
 from openai import OpenAI
+
 from app.core.config import Settings
 
 
@@ -84,13 +86,15 @@ Return valid JSON only in this exact format:
 
         try:
             parsed = json.loads(raw_text)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             start = raw_text.find("{")
             end = raw_text.rfind("}") + 1
             if start >= 0 and end > start:
                 parsed = json.loads(raw_text[start:end])
             else:
-                raise ValueError(f"Could not parse model response as JSON: {raw_text}")
+                raise ValueError(
+                    f"Could not parse model response as JSON: {raw_text}"
+                ) from e
 
         # Validate the parsed response and ensure it contains the expected keys and values
         sentiment = str(parsed.get("sentiment", "")).lower().strip()

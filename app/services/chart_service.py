@@ -1,5 +1,5 @@
-import pandas as pd
 import altair as alt  # for data visualization
+import pandas as pd
 
 
 # Service class for building charts based on sentiment analysis results

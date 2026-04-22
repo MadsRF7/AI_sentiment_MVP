@@ -1,17 +1,18 @@
 from sqlalchemy import (
     Column,
+    DateTime,
+    Enum,
+    ForeignKey,
     Integer,
     String,
     Text,
-    DateTime,
-    ForeignKey,
-    func,
-    Enum,
     UniqueConstraint,
+    func,
 )  # Import necessary SQLAlchemy components
 from sqlalchemy.orm import (
     relationship,
 )  # Import relationship for defining relationships between tables
+
 from db.database import Base  # Import the Base class from the database module
 
 
