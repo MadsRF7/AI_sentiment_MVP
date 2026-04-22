@@ -6,7 +6,6 @@ import agentql
 import pandas as pd
 from playwright.sync_api import sync_playwright
 
-
 QUERY = """
 {
     comments[] {
@@ -59,8 +58,7 @@ class TikTokScraperService:
 
     @staticmethod
     def comments_to_dataframe(
-        comments: List[Dict],
-        comment_column: str = "comment_text"
+        comments: List[Dict], comment_column: str = "comment_text"
     ) -> pd.DataFrame:
         if not comments:
             return pd.DataFrame(columns=[comment_column, "author"])
@@ -75,7 +73,7 @@ class TikTokScraperService:
             return None
 
         text = raw_text.strip().upper().replace(" ", "")
-        text = text.replace("\u00A0", "")
+        text = text.replace("\u00a0", "")
         text = re.sub(r"[^0-9K M\.,]", "", text).replace(" ", "")
         if not text:
             return None
@@ -109,7 +107,9 @@ class TikTokScraperService:
                     raw_text = (locator.inner_text(timeout=2000) or "").strip()
                     parsed = self.parse_count_text(raw_text)
                     if parsed is not None:
-                        print(f"[comment_count] Fundet via selector '{selector}': {raw_text} -> {parsed}")
+                        print(
+                            f"[comment_count] Fundet via selector '{selector}': {raw_text} -> {parsed}"
+                        )
                         return parsed
             except Exception:
                 pass
@@ -131,7 +131,9 @@ class TikTokScraperService:
             """)
             parsed = self.parse_count_text(raw_text or "")
             if parsed is not None:
-                print(f"[comment_count] Fundet via DOM fallback: {raw_text} -> {parsed}")
+                print(
+                    f"[comment_count] Fundet via DOM fallback: {raw_text} -> {parsed}"
+                )
                 return parsed
         except Exception:
             pass
@@ -250,7 +252,9 @@ class TikTokScraperService:
                             try:
                                 a_loc = item.locator(a_sel).first
                                 if a_loc.count() > 0:
-                                    author = (a_loc.inner_text(timeout=500) or "").strip()
+                                    author = (
+                                        a_loc.inner_text(timeout=500) or ""
+                                    ).strip()
                                     if author:
                                         break
                             except Exception:
@@ -269,7 +273,10 @@ class TikTokScraperService:
 
                                 for j in range(min(node_count, 10)):
                                     try:
-                                        val = (text_nodes.nth(j).inner_text(timeout=300) or "").strip()
+                                        val = (
+                                            text_nodes.nth(j).inner_text(timeout=300)
+                                            or ""
+                                        ).strip()
                                         if val:
                                             collected.append(val)
                                     except Exception:
@@ -292,10 +299,12 @@ class TikTokScraperService:
                             continue
 
                         seen.add(key)
-                        all_comments.append({
-                            "author": author,
-                            "text": text,
-                        })
+                        all_comments.append(
+                            {
+                                "author": author,
+                                "text": text,
+                            }
+                        )
 
                     except Exception:
                         continue
@@ -346,7 +355,9 @@ class TikTokScraperService:
                         break
 
                 if not target_box:
-                    print(f"[scroll] Runde {round_no}: ingen synlig comment-boks fundet, fallback til page wheel.")
+                    print(
+                        f"[scroll] Runde {round_no}: ingen synlig comment-boks fundet, fallback til page wheel."
+                    )
                     page.mouse.wheel(0, 2000)
                     page.wait_for_timeout(pause_ms)
                     continue
@@ -412,7 +423,9 @@ class TikTokScraperService:
 
                 page.goto(video_url, wait_until="domcontentloaded", timeout=60000)
 
-                emit_status("If TikTok asks for verification, please solve CAPTCHA in the browser window")
+                emit_status(
+                    "If TikTok asks for verification, please solve CAPTCHA in the browser window"
+                )
                 page.wait_for_timeout(wait_after_load_ms)
 
                 self.handle_cookie_popup(page)
@@ -423,7 +436,9 @@ class TikTokScraperService:
                 emit_status("Opening comment section...")
                 panel_opened = self.open_comment_panel(page)
                 if not panel_opened:
-                    raise RuntimeError("Could not open the TikTok comment section automatically.")
+                    raise RuntimeError(
+                        "Could not open the TikTok comment section automatically."
+                    )
 
                 emit_status("Comment section opened")
                 print("[SCRAPE] Kommentarpanel åbnet.")
@@ -436,13 +451,17 @@ class TikTokScraperService:
                 self.scroll_comment_panel(page, scroll_rounds=4, pause_ms=1200)
 
                 for iteration in range(1, max_scroll_iterations + 1):
-                    print(f"\n========== ITERATION {iteration}/{max_scroll_iterations} ==========")
+                    print(
+                        f"\n========== ITERATION {iteration}/{max_scroll_iterations} =========="
+                    )
 
                     emit_status("Scanning comments...", len(all_comments))
                     page.wait_for_timeout(wait_between_rounds_ms)
 
                     visible_comments = self.extract_visible_comments_from_dom(page)
-                    print(f"[SCRAPE] Synlige comments fundet i DOM: {len(visible_comments)}")
+                    print(
+                        f"[SCRAPE] Synlige comments fundet i DOM: {len(visible_comments)}"
+                    )
 
                     added_this_round = 0
 
@@ -462,11 +481,15 @@ class TikTokScraperService:
                     if added_this_round > 0:
                         emit_status("Found more comments", current_unique_count)
                     else:
-                        emit_status("No new comments found in this pass", current_unique_count)
+                        emit_status(
+                            "No new comments found in this pass", current_unique_count
+                        )
 
                     if current_unique_count == previous_unique_count:
                         stable_rounds += 1
-                        print(f"[SCRAPE] Ingen vækst. Stable rounds: {stable_rounds}/{stable_rounds_required}")
+                        print(
+                            f"[SCRAPE] Ingen vækst. Stable rounds: {stable_rounds}/{stable_rounds_required}"
+                        )
                     else:
                         stable_rounds = 0
                         previous_unique_count = current_unique_count
@@ -475,7 +498,9 @@ class TikTokScraperService:
                     if stable_rounds >= stable_rounds_required:
                         emit_status("No more comments found", current_unique_count)
                         emit_status("Finalizing comments...", current_unique_count)
-                        print("[SCRAPE] Stopper: ingen vækst i tilstrækkeligt mange runder.")
+                        print(
+                            "[SCRAPE] Stopper: ingen vækst i tilstrækkeligt mange runder."
+                        )
                         break
 
                     emit_status("Looking for more comments...", current_unique_count)
@@ -487,9 +512,13 @@ class TikTokScraperService:
                     print(f"[SCRAPE] Scroll-resultat: {scrolled}")
 
                 final_comments = list(all_comments.values())
-                emit_status("Comments collected and ready for analysis", len(final_comments))
+                emit_status(
+                    "Comments collected and ready for analysis", len(final_comments)
+                )
 
-                print(f"\n[SCRAPE] Færdig. Samlet antal unikke kommentarer scrapet: {len(final_comments)}")
+                print(
+                    f"\n[SCRAPE] Færdig. Samlet antal unikke kommentarer scrapet: {len(final_comments)}"
+                )
                 print(f"[SCRAPE] TikTok official comment count: {comment_count}")
                 return final_comments, comment_count
 
@@ -509,6 +538,8 @@ class TikTokScraperService:
         df = self.comments_to_dataframe(comments, comment_column=comment_column)
         return df, comment_count
 
-    def save_comments_to_json(self, comments: List[Dict], output_path: str = "output_comments.json"):
+    def save_comments_to_json(
+        self, comments: List[Dict], output_path: str = "output_comments.json"
+    ):
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(comments, f, ensure_ascii=False, indent=2)

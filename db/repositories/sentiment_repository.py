@@ -1,7 +1,11 @@
 import pandas as pd
 from db.models import SentimentResult
 from sqlalchemy import select
-from db.models import SentimentResult, Comment, Video # Import the SentimentResult, Comment, and Video models from the models module
+from db.models import (
+    SentimentResult,
+    Comment,
+    Video,
+)  # Import the SentimentResult, Comment, and Video models from the models module
 
 
 # Repository for handling sentiment analysis results in the database.
@@ -9,8 +13,10 @@ class SentimentRepository:
     def __init__(self, session):
         self.session = session
 
-# Save the sentiment analysis result for a given comment.
-    def save_sentiment(self, comment_id: int, sentiment: str, reason: str, model_name: str):
+    # Save the sentiment analysis result for a given comment.
+    def save_sentiment(
+        self, comment_id: int, sentiment: str, reason: str, model_name: str
+    ):
         row = SentimentResult(
             comment_id=comment_id,
             sentiment=sentiment,

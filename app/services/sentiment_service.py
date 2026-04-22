@@ -1,10 +1,10 @@
-import json # for debugging purposes, to print the raw response from the API in a readable format
-import pandas as pd # for data manipulation and analysis
+import json  # for debugging purposes, to print the raw response from the API in a readable format
+import pandas as pd  # for data manipulation and analysis
 from openai import OpenAI
-from config import Settings
+from app.core.config import Settings
 
 
-# SentimentService is responsible for classifying comments into positive, neutral, or negative using the OpenAI API. 
+# SentimentService is responsible for classifying comments into positive, neutral, or negative using the OpenAI API.
 # It checks if the API key is set and provides a method to classify individual comments based on a structured prompt.
 class SentimentService:
     def __init__(self):
@@ -20,7 +20,7 @@ class SentimentService:
         """Classify one comment into positive, neutral, or negative."""
         if self.client is None:
             raise RuntimeError("OPENAI_API_KEY is not set.")
-        
+
         developer_prompt = """
 You are a strict and context-aware sentiment analysis classifier.
 
@@ -66,10 +66,10 @@ Return valid JSON only in this exact format:
 }
 """
 
-# The user prompt includes the comment to be classified, 
-# and the developer prompt provides detailed instructions 
-# and rules for classification to improve accuracy and consistency.
-        user_prompt = f"Comment: \"{comment}\""
+        # The user prompt includes the comment to be classified,
+        # and the developer prompt provides detailed instructions
+        # and rules for classification to improve accuracy and consistency.
+        user_prompt = f'Comment: "{comment}"'
 
         response = self.client.responses.create(
             model="gpt-4.1-mini",
@@ -91,7 +91,7 @@ Return valid JSON only in this exact format:
                 parsed = json.loads(raw_text[start:end])
             else:
                 raise ValueError(f"Could not parse model response as JSON: {raw_text}")
-        
+
         # Validate the parsed response and ensure it contains the expected keys and values
         sentiment = str(parsed.get("sentiment", "")).lower().strip()
         reason = str(parsed.get("reason", "")).strip()
@@ -103,18 +103,20 @@ Return valid JSON only in this exact format:
             "sentiment": sentiment,
             "reason": reason,
         }
-    
-    # This method iterates through all comments in the provided DataFrame, 
-    # classifies each comment using the classify_comment method, 
-    # and enriches the DataFrame with the sentiment and reason for each comment. 
+
+    # This method iterates through all comments in the provided DataFrame,
+    # classifies each comment using the classify_comment method,
+    # and enriches the DataFrame with the sentiment and reason for each comment.
     # It also supports an optional progress callback to track the progress of the analysis.
-    def analyze_comments(self, df: pd.DataFrame, progress_callback=None) -> pd.DataFrame:
+    def analyze_comments(
+        self, df: pd.DataFrame, progress_callback=None
+    ) -> pd.DataFrame:
         """Analyze all comments in the dataframe."""
         results = []
         total = len(df)
         comment_column = Settings.COMMENT_COLUMN
 
-# Iterate through each comment in the DataFrame, classify it, and enrich the row with the sentiment and reason.
+        # Iterate through each comment in the DataFrame, classify it, and enrich the row with the sentiment and reason.
         for idx, row in df.iterrows():
             comment = row[comment_column]
 
@@ -126,18 +128,18 @@ Return valid JSON only in this exact format:
                 sentiment = "error"
                 reason = str(e)
 
-# Enrich the original row with the sentiment and reason, and add it to the results list
+            # Enrich the original row with the sentiment and reason, and add it to the results list
             enriched_row = row.to_dict()
             enriched_row["sentiment"] = sentiment
             enriched_row["reason"] = reason
             results.append(enriched_row)
-# Update progress if a callback is provided (e.g., to update a progress bar in the UI)
+            # Update progress if a callback is provided (e.g., to update a progress bar in the UI)
             if progress_callback is not None and total > 0:
                 progress_callback((idx + 1) / total)
 
-# After processing all comments, convert the results list into a new DataFrame and return it
+        # After processing all comments, convert the results list into a new DataFrame and return it
         return pd.DataFrame(results)
-    
+
     # This method takes a Series of sentiment counts (e.g., number of positive, neutral, and negative comments)
     # and determines the overall sentiment label based on which sentiment has the highest count.
     @staticmethod

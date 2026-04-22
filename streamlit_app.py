@@ -1,22 +1,25 @@
-import pandas as pd
-import streamlit as st
-from pathlib import Path
+import time
+from textwrap import dedent
 
-from config import Settings
-from services.file_service import FileService
-from services.sentiment_analysis import SentimentService
-from services.analysis_service import AnalysisService
-from services.tiktok_scraper_service import TikTokScraperService
-from charts.chart_service import ChartService
+import streamlit as st
+
+from app.core.config import Settings
+from app.core.helpers import format_eta, safe_percent
+from app.services.analysis_service import AnalysisService
+from app.services.chart_service import ChartService
+from app.services.file_service import FileService
+from app.services.sentiment_service import SentimentService
+from app.services.tiktok_scraper_service import TikTokScraperService
+from app.ui.components import (
+    render_analysis_eta,
+    render_comment_card,
+    render_detailed_results_table,
+    render_scrape_status,
+)
 
 from db.database import Base, engine, get_session
-from db.repositories.analysis_run_repository import AnalysisRunRepository
 from db.repositories.analysis_result_repository import AnalysisResultRepository
-
-from textwrap import dedent
-from typing import Optional
-import time
-
+from db.repositories.analysis_run_repository import AnalysisRunRepository
 
 # -------------------------
 # PAGE CONFIG
@@ -26,21 +29,6 @@ st.set_page_config(
     page_icon=Settings.PAGE_ICON,
     layout=Settings.LAYOUT,
 )
-
-# -------------------------
-# LOAD CSS
-# -------------------------
-def load_css():
-    css_path = Path(__file__).parent / "styles.css"
-
-    if css_path.exists():
-        css = css_path.read_text(encoding="utf-8")
-        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-    else:
-        st.error(f"styles.css blev ikke fundet: {css_path}")
-
-
-load_css()
 
 
 # -------------------------
@@ -55,271 +43,6 @@ file_service = FileService()
 sentiment_service = SentimentService()
 chart_service = ChartService()
 tiktok_scraper_service = TikTokScraperService()
-
-# -------------------------
-# SESSION STATE
-# -------------------------
-if "input_df" not in st.session_state:
-    st.session_state["input_df"] = None
-
-if "raw_preview_df" not in st.session_state:
-    st.session_state["raw_preview_df"] = None
-
-if "source_file_name" not in st.session_state:
-    st.session_state["source_file_name"] = None
-
-if "active_run_id" not in st.session_state:
-    st.session_state["active_run_id"] = None
-
-if "scrape_status_message" not in st.session_state:
-    st.session_state["scrape_status_message"] = None
-
-if "scrape_status_count" not in st.session_state:
-    st.session_state["scrape_status_count"] = None
-
-if "scrape_status_success" not in st.session_state:
-    st.session_state["scrape_status_success"] = False
-
-
-# -------------------------
-# HELPERS
-# -------------------------
-
-import time
-
-
-def format_eta(seconds: float) -> str:
-    seconds = max(0, int(round(seconds)))
-
-    if seconds < 60:
-        return f"{seconds} sec"
-
-    minutes, remaining_seconds = divmod(seconds, 60)
-
-    if minutes < 60:
-        if remaining_seconds == 0:
-            return f"{minutes} min"
-        return f"{minutes} min {remaining_seconds} sec"
-
-    hours, remaining_minutes = divmod(minutes, 60)
-    if remaining_minutes == 0:
-        return f"{hours} hr"
-    return f"{hours} hr {remaining_minutes} min"
-
-
-def render_analysis_eta(container, message: str):
-    container.markdown(
-        f"""
-        <div class="analysis-eta-text">
-            {message}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-def safe_percent(count: int, total: int) -> int:
-    if total == 0:
-        return 0
-    return round((count / total) * 100)
-
-from typing import Optional
-
-def render_scrape_status(
-    container,
-    message: str,
-    count: Optional[int] = None,
-    is_success: bool = False,
-):
-    count_html = ""
-    if count is not None:
-        count_label = "comments collected" if is_success else "comments collected so far"
-        count_html = f"<div class='scrape-status-count'>{count} {count_label}</div>"
-
-    box_class = "scrape-status-box success" if is_success else "scrape-status-box"
-
-    container.markdown(
-        f"""
-        <div class="{box_class}">
-            <div class="scrape-status-message">{message}</div>
-            {count_html}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def format_eta(seconds: float) -> str:
-    seconds = max(0, int(round(seconds)))
-
-    if seconds < 60:
-        return f"{seconds} sec"
-
-    minutes, remaining_seconds = divmod(seconds, 60)
-
-    if minutes < 60:
-        if remaining_seconds == 0:
-            return f"{minutes} min"
-        return f"{minutes} min {remaining_seconds} sec"
-
-    hours, remaining_minutes = divmod(minutes, 60)
-    if remaining_minutes == 0:
-        return f"{hours} hr"
-    return f"{hours} hr {remaining_minutes} min"
-
-
-def render_analysis_eta(container, message: str):
-    container.markdown(
-        f"""
-        <div class="analysis-eta-text">
-            {message}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-def render_comment_card(username: str, text: str, sentiment: str):
-    sentiment = str(sentiment).lower().strip()
-
-    config = {
-        "positive": {
-            "card_class": "comment-positive-v2",
-            "icon_class": "comment-icon-positive",
-            "badge_class": "sentiment-badge-positive",
-            "emoji": "☺",
-            "label": "Positive",
-        },
-        "neutral": {
-            "card_class": "comment-neutral-v2",
-            "icon_class": "comment-icon-neutral",
-            "badge_class": "sentiment-badge-neutral",
-            "emoji": "•",
-            "label": "Neutral",
-        },
-        "negative": {
-            "card_class": "comment-negative-v2",
-            "icon_class": "comment-icon-negative",
-            "badge_class": "sentiment-badge-negative",
-            "emoji": "☹",
-            "label": "Negative",
-        },
-    }.get(
-        sentiment,
-        {
-            "card_class": "comment-neutral-v2",
-            "icon_class": "comment-icon-neutral",
-            "badge_class": "sentiment-badge-neutral",
-            "emoji": "•",
-            "label": "Neutral",
-        },
-    )
-
-    safe_username = str(username).replace("<", "&lt;").replace(">", "&gt;")
-    safe_text = str(text).replace("<", "&lt;").replace(">", "&gt;")
-
-    html = f"""
-    <div class="comment-card-v2 {config['card_class']}">
-        <div class="comment-card-inner">
-            <div class="comment-icon {config['icon_class']}">
-                <span>{config['emoji']}</span>
-            </div>
-            <div class="comment-content">
-                <div class="comment-username">@{safe_username}</div>
-                <div class="comment-text">{safe_text}</div>
-                <div class="sentiment-badge {config['badge_class']}">{config['label']}</div>
-            </div>
-        </div>
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
-
-def render_detailed_results_table(df: pd.DataFrame):
-    if df is None or df.empty:
-        st.info("No detailed results to show.")
-        return
-
-    def esc(value):
-        if pd.isna(value):
-            return ""
-        return (
-            str(value)
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        )
-
-    def sentiment_badge(value):
-        sentiment = str(value).lower().strip()
-
-        badge_class = {
-            "positive": "results-sentiment-positive",
-            "neutral": "results-sentiment-neutral",
-            "negative": "results-sentiment-negative",
-        }.get(sentiment, "results-sentiment-default")
-
-        return f'<span class="results-sentiment-badge {badge_class}">{esc(value)}</span>'
-
-    render_df = df.rename(
-        columns={
-            "row_index": "#",
-            "comment_text": "Comments",
-            "sentiment": "Sentiment",
-            "reason": "Reason",
-            "created_at": "Date analyzed",
-        }
-    ).copy()
-
-    desired_columns = ["#", "Comments", "Sentiment", "Reason", "Date analyzed"]
-    existing_columns = [col for col in desired_columns if col in render_df.columns]
-    render_df = render_df[existing_columns]
-
-    rows_html = []
-    for _, row in render_df.iterrows():
-        row_html = "<tr>"
-
-        for col in existing_columns:
-            value = row[col]
-
-            if col == "Sentiment":
-                cell_html = sentiment_badge(value)
-            else:
-                cell_html = esc(value)
-
-            extra_class = ""
-            if col == "#":
-                extra_class = " col-index"
-            elif col == "Comments":
-                extra_class = " col-comments"
-            elif col == "Reason":
-                extra_class = " col-reason"
-            elif col == "Model":
-                extra_class = " col-model"
-            elif col == "Created at":
-                extra_class = " col-created"
-
-            row_html += f'<td class="{extra_class}">{cell_html}</td>'
-
-        row_html += "</tr>"
-        rows_html.append(row_html)
-
-    header_html = "".join([f"<th>{esc(col)}</th>" for col in existing_columns])
-    body_html = "".join(rows_html)
-
-    table_html = f"""
-    <div class="results-table-card">
-        <div class="results-table-scroll">
-            <table class="results-table-custom">
-                <thead>
-                    <tr>{header_html}</tr>
-                </thead>
-                <tbody>
-                    {body_html}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    """
-
-    st.markdown(table_html, unsafe_allow_html=True)
 
 
 # -------------------------
@@ -447,7 +170,9 @@ with st.container():
                 st.session_state["tiktok_comment_count"] = comment_count
 
                 # final green success status
-                st.session_state["scrape_status_message"] = "Comments collected and ready for analysis"
+                st.session_state["scrape_status_message"] = (
+                    "Comments collected and ready for analysis"
+                )
                 st.session_state["scrape_status_count"] = len(df)
                 st.session_state["scrape_status_success"] = True
 
@@ -510,11 +235,15 @@ if stored_df is not None:
                         elapsed = time.time() - analysis_start_time
 
                         if progress_value is None or progress_value <= 0:
-                            render_analysis_eta(analysis_eta_placeholder, "Estimating remaining time...")
+                            render_analysis_eta(
+                                analysis_eta_placeholder, "Estimating remaining time..."
+                            )
                             return
 
                         if progress_value >= 1.0:
-                            render_analysis_eta(analysis_eta_placeholder, "Finalizing analysis...")
+                            render_analysis_eta(
+                                analysis_eta_placeholder, "Finalizing analysis..."
+                            )
                             return
 
                         estimated_total_time = elapsed / progress_value
@@ -595,25 +324,47 @@ if active_run_id is not None:
                 )
 
                 preview_df = db_df[["comment_text", "sentiment"]].copy().head(4)
-                demo_usernames = ["user_happy", "user_neutral", "user_critical", "user_fan"]
+                demo_usernames = [
+                    "user_happy",
+                    "user_neutral",
+                    "user_critical",
+                    "user_fan",
+                ]
 
                 if not preview_df.empty:
                     for idx, (_, row) in enumerate(preview_df.iterrows()):
                         comment_text = str(row["comment_text"]).strip()
                         sentiment = str(row["sentiment"]).lower().strip()
-                        username = demo_usernames[idx] if idx < len(demo_usernames) else f"user_{idx + 1}"
+                        username = (
+                            demo_usernames[idx]
+                            if idx < len(demo_usernames)
+                            else f"user_{idx + 1}"
+                        )
                         render_comment_card(username, comment_text, sentiment)
                 elif stored_raw_df is not None and not stored_raw_df.empty:
                     preview_only = stored_raw_df.head(4).copy()
                     comment_col = Settings.COMMENT_COLUMN
 
                     if comment_col in preview_only.columns:
-                        fallback_sentiments = ["positive", "neutral", "negative", "positive"]
+                        fallback_sentiments = [
+                            "positive",
+                            "neutral",
+                            "negative",
+                            "positive",
+                        ]
 
                         for idx, (_, row) in enumerate(preview_only.iterrows()):
                             comment_text = str(row[comment_col]).strip()
-                            username = demo_usernames[idx] if idx < len(demo_usernames) else f"user_{idx + 1}"
-                            sentiment = fallback_sentiments[idx] if idx < len(fallback_sentiments) else "neutral"
+                            username = (
+                                demo_usernames[idx]
+                                if idx < len(demo_usernames)
+                                else f"user_{idx + 1}"
+                            )
+                            sentiment = (
+                                fallback_sentiments[idx]
+                                if idx < len(fallback_sentiments)
+                                else "neutral"
+                            )
                             render_comment_card(username, comment_text, sentiment)
 
             tiktok_total = st.session_state.get("tiktok_comment_count") or total_count
@@ -698,8 +449,8 @@ if active_run_id is not None:
             st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
             st.subheader("Detailed results")
             sort_option = st.selectbox(
-            "Sort by sentiment",
-            ["Default", "Positive", "Neutral", "Negative"],
+                "Sort by sentiment",
+                ["Default", "Positive", "Neutral", "Negative"],
             )
 
             sorted_df = db_df.copy()
@@ -709,7 +460,9 @@ if active_run_id is not None:
                 sorted_df["sort_key"] = sorted_df["sentiment"].apply(
                     lambda x: 0 if x == sort_option.lower() else 1
                 )
-                sorted_df = sorted_df.sort_values(by="sort_key").drop(columns=["sort_key"])
+                sorted_df = sorted_df.sort_values(by="sort_key").drop(
+                    columns=["sort_key"]
+                )
             render_detailed_results_table(sorted_df)
 
             csv_data = sorted_df.to_csv(index=False).encode("utf-8")

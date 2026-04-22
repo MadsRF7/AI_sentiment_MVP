@@ -1,7 +1,7 @@
 import hashlib
 import re
 
-from config import Settings
+from app.core.config import Settings
 
 
 class AnalysisService:
