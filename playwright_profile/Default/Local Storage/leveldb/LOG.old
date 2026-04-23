@@ -1,15 +1,6 @@
-2026/04/22-16:07:19.671 599d0 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
-2026/04/22-16:07:19.674 599d0 Recovering log #95
-2026/04/22-16:07:19.675 599d0 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/000095.log 
-2026/04/22-16:08:19.684 599d5 Level-0 table #99: started
-2026/04/22-16:08:19.689 599d5 Level-0 table #99: 19426 bytes OK
-2026/04/22-16:08:19.691 599d5 Delete type=0 #95
-2026/04/22-16:08:19.694 599d0 Compacting 4@0 + 1@1 files
-2026/04/22-16:08:19.698 599d0 Generated table #100@0: 73 keys, 95260 bytes
-2026/04/22-16:08:19.698 599d0 Compacted 4@0 + 1@1 files => 95260 bytes
-2026/04/22-16:08:19.700 599d0 compacted to: files[ 0 1 1 0 0 0 0 ]
-2026/04/22-16:08:19.700 599d0 Delete type=2 #99
-2026/04/22-16:08:19.701 599d0 Delete type=2 #96
-2026/04/22-16:08:19.701 599d0 Delete type=2 #86
-2026/04/22-16:08:19.701 599d0 Delete type=2 #93
-2026/04/22-16:08:19.701 599d0 Delete type=2 #90
+2026/04/23-10:50:14.676 72e08 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/04/23-10:50:14.678 72e08 Recovering log #98
+2026/04/23-10:50:14.681 72e08 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/000098.log 
+2026/04/23-10:51:02.897 72e0b Level-0 table #103: started
+2026/04/23-10:51:02.900 72e0b Level-0 table #103: 19816 bytes OK
+2026/04/23-10:51:02.904 72e0b Delete type=0 #98
