@@ -1,6 +1,0 @@
-2026/04/23-10:50:14.676 72e08 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
-2026/04/23-10:50:14.678 72e08 Recovering log #98
-2026/04/23-10:50:14.681 72e08 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/000098.log 
-2026/04/23-10:51:02.897 72e0b Level-0 table #103: started
-2026/04/23-10:51:02.900 72e0b Level-0 table #103: 19816 bytes OK
-2026/04/23-10:51:02.904 72e0b Delete type=0 #98
