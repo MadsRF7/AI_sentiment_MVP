@@ -1,5 +1,6 @@
-2026/04/24-11:46:03.323 9bfd3 Creating DB /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb since it was missing.
-2026/04/24-11:46:03.334 9bfd3 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
-2026/04/24-11:47:03.340 9bfd6 Level-0 table #5: started
-2026/04/24-11:47:03.345 9bfd6 Level-0 table #5: 74333 bytes OK
-2026/04/24-11:47:03.348 9bfd6 Delete type=0 #3
+2026/04/25-13:07:54.236 ac8dc Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/04/25-13:07:54.241 ac8dc Recovering log #4
+2026/04/25-13:07:54.242 ac8dc Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/000004.log 
+2026/04/25-13:08:26.746 ac8df Level-0 table #8: started
+2026/04/25-13:08:26.749 ac8df Level-0 table #8: 23460 bytes OK
+2026/04/25-13:08:26.754 ac8df Delete type=0 #4
