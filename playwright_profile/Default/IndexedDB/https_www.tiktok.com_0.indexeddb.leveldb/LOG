@@ -1,3 +1,12 @@
-2026/04/24-11:46:05.533 9bf79 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/IndexedDB/https_www.tiktok.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/04/24-11:46:05.533 9bf79 Recovering log #7
-2026/04/24-11:46:05.547 9bf79 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/IndexedDB/https_www.tiktok.com_0.indexeddb.leveldb/000007.log 
+2026/04/25-13:10:42.543 ad7f3 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/IndexedDB/https_www.tiktok.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/25-13:10:42.544 ad7f3 Recovering log #7
+2026/04/25-13:10:42.559 ad7f3 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/IndexedDB/https_www.tiktok.com_0.indexeddb.leveldb/000007.log 
+2026/04/25-13:10:42.624 ad7f3 Level-0 table #12: started
+2026/04/25-13:10:42.635 ad7f3 Level-0 table #12: 916712 bytes OK
+2026/04/25-13:10:42.641 ad7f3 Delete type=0 #7
+2026/04/25-13:10:43.762 ad7f3 Compacting 1@1 + 1@2 files
+2026/04/25-13:10:43.775 ad7f3 Generated table #13@1: 540 keys, 13994 bytes
+2026/04/25-13:10:43.775 ad7f3 Compacted 1@1 + 1@2 files => 13994 bytes
+2026/04/25-13:10:43.783 ad7f3 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/04/25-13:10:43.783 ad7f3 Delete type=2 #12
+2026/04/25-13:10:43.783 ad7f3 Delete type=2 #9
