@@ -1,6 +1,6 @@
-2026/04/25-13:07:54.236 ac8dc Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
-2026/04/25-13:07:54.241 ac8dc Recovering log #4
-2026/04/25-13:07:54.242 ac8dc Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/000004.log 
-2026/04/25-13:08:26.746 ac8df Level-0 table #8: started
-2026/04/25-13:08:26.749 ac8df Level-0 table #8: 23460 bytes OK
-2026/04/25-13:08:26.754 ac8df Delete type=0 #4
+2026/04/27-13:05:52.393 ddd3f Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/04/27-13:05:52.396 ddd3f Recovering log #4
+2026/04/27-13:05:52.398 ddd3f Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Local Storage/leveldb/000004.log 
+2026/04/27-13:06:52.402 ddd42 Level-0 table #8: started
+2026/04/27-13:06:52.408 ddd42 Level-0 table #8: 23285 bytes OK
+2026/04/27-13:06:52.411 ddd42 Delete type=0 #4

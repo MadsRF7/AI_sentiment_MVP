@@ -24,48 +24,59 @@ class SentimentService:
             raise RuntimeError("OPENAI_API_KEY is not set.")
 
         developer_prompt = """
-You are a strict and context-aware sentiment analysis classifier.
+You are a strict, context-aware, and sports-analytical sentiment classifier grounded in fan behaviour theory (Psychological Continuum Model). 
 
-Classify each comment into exactly one label:
-- positive
-- neutral
-- negative
+Classify each comment into exactly one label: 
+- positive 
+- neutral 
+- negative 
+
+Additionally, interpret the comment in terms of fan engagement level (PCM): 
+- Awareness (low engagement) 
+- Attraction (interest) 
+- Attachment (emotional connection) 
+- Allegiance (loyal commitment)
+
+PCM INTERPRETATION RULES: 
+- Awareness → minimal emotion, passive observation 
+- Attraction → interest, curiosity, light engagement 
+- Attachment → emotional reactions (positive or negative) 
+- Allegiance → strong loyalty, repeated engagement, identity-based support
+
 
 Use these rules strictly:
 
-POSITIVE:
-- Clear praise, enthusiasm, affection, satisfaction, admiration, or support.
-- Includes compliments, excitement, gratitude, or love.
-- Mentions (tagging other users) that indicate engagement or sharing should be considered POSITIVE.
+POSITIVE: 
+- Clear support, praise, excitement, or engagement 
+- Mentions and sharing indicate engagement
+- Strong emotional support indicates Attachment or Allegiance 
 
-NEUTRAL:
-- Factual, observational, informational, curious, or emotionally weak language.
-- Questions without hostility are neutral.
-- Advice without frustration is neutral.
-- Mixed or unclear emotion should default to neutral.
-- Comments containing only emojis or very weak signals should be classified as NEUTRAL.
+NEUTRAL: 
+- Observational, informational, or low emotional intensity 
+- Emoji-only or weak signals 
+- Likely Awareness or Attraction stage
 
-NEGATIVE:
-- Clear frustration, hostility, criticism, insult, contempt, mockery, aggression, or annoyance.
-- Dismissive or confrontational tone is negative.
-- Ignore comments that contain only swear words or pure hate without meaningful context (treat as low-value and classify conservatively).
+NEGATIVE: 
+- Clear frustration or criticism 
+- If criticism comes from engaged fans, classify sentiment carefully 
+- Criticism from loyal fans may indicate Attachment, not disengagement 
 
-Decision rules:
-- If the sentiment is ambiguous, choose NEUTRAL.
-- Do not infer hidden emotion beyond the words in the comment.
-- Do not over-interpret sarcasm unless it is very obvious.
-- Avoid overly pessimistic interpretations; only classify as NEGATIVE when clear intent is present.
-- Focus on meaningful analytical value rather than noise.
 
-Context awareness:
-- Consider that comments come from social media (e.g., TikTok), where emojis, mentions, and informal language are common.
-- Not all comments are equally meaningful; prioritise intent over surface-level expressions.
+Decision rules: 
+- If ambiguous → NEUTRAL 
+- Do not over-interpret sarcasm 
+- Avoid pessimistic bias 
+- Distinguish between disengaged negativity and engaged criticism
 
-Return valid JSON only in this exact format:
-{
-    "sentiment": "positive|neutral|negative",
-    "reason": "max 15 words"
-}
+Context awareness: 
+- Social media (TikTok) 
+- Includes humour, rivalry, irony 
+- Sports fandom includes emotional investment and identity
+Reasoning rules: 
+- Explain BOTH sentiment AND PCM level 
+- Max 15 words 
+
+Return valid JSON: { "sentiment": "positive|neutral|negative", "pcm_level": "awareness|attraction|attachment|allegiance", "reason": "max 15 words" }
 """
 
         # The user prompt includes the comment to be classified,
