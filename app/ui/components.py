@@ -125,14 +125,14 @@ def render_detailed_results_table(df: pd.DataFrame):
     render_df = df.rename(
         columns={
             "row_index": "#",
-            "comment_text": "Comments",
+            "comment_text": "Comment",
             "sentiment": "Sentiment",
             "reason": "Reason",
-            "created_at": "Date analyzed",
+            "created_at": "Date analysed",
         }
     ).copy()
 
-    desired_columns = ["#", "Comments", "Sentiment", "Reason", "Date analyzed"]
+    desired_columns = ["#", "Comment", "Sentiment", "Reason", "Date analysed"]
     existing_columns = [col for col in desired_columns if col in render_df.columns]
     render_df = render_df[existing_columns]
 
