@@ -1,3 +1,6 @@
-2026/04/15-17:12:37.684 2a238e1 Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Session Storage/MANIFEST-000001
-2026/04/15-17:12:37.688 2a238e1 Recovering log #13
-2026/04/15-17:12:37.690 2a238e1 Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Session Storage/000013.log 
+2026/04/15-21:36:27.566 2a489eb Reusing MANIFEST /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Session Storage/MANIFEST-000001
+2026/04/15-21:36:27.569 2a489eb Recovering log #13
+2026/04/15-21:36:27.575 2a489eb Reusing old log /Users/madsfrederiksen/Documents/GitHub/AI_sentiment_MVP/playwright_profile/Default/Session Storage/000013.log 
+2026/04/15-21:37:28.739 2a489eb Level-0 table #17: started
+2026/04/15-21:37:28.765 2a489eb Level-0 table #17: 21938 bytes OK
+2026/04/15-21:37:28.772 2a489eb Delete type=0 #13
